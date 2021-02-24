@@ -1,0 +1,38 @@
+cabal-version:       3.0
+
+name:                DraftGen
+version:             0.1.0.0
+synopsis:            Tool for generating booster packs in MTG
+-- description:
+homepage:            https://github.com/skykanin/draftgen
+-- bug-reports:
+license:             GPL-3.0-or-later
+license-file:        LICENSE
+author:              skykanin
+maintainer:          3789764+skykanin@users.noreply.github.com
+-- copyright:
+category:            Tool
+extra-source-files:  CHANGELOG.md
+
+common shared-properties
+  default-language: Haskell2010
+  default-extensions: OverloadedStrings
+
+executable dg
+  import:              shared-properties
+  main-is:             Main.hs
+  hs-source-dirs:      src
+  build-depends:       base ^>=4.14.1.0
+                     , dg-lib
+  ghc-options:         -threaded -Wall
+
+library dg-lib
+  import:              shared-properties
+  exposed-modules:     CLI
+  build-depends:       base ^>= 4.14.1.0
+                     , aeson ^>= 1.5.6.0
+                     , optparse-generic ^>= 1.4.4
+                     , unordered-containers ^>= 0.2.13.0
+                     , vector ^>= 0.12.2.0
+  hs-source-dirs:      src/DraftGen
+
