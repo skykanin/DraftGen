@@ -22,7 +22,7 @@ executable dg
   import:              shared-properties
   main-is:             Main.hs
   hs-source-dirs:      src
-  build-depends:       base ^>=4.14.1.0
+  build-depends:       base ^>= 4.14.1.0
                      , dg-lib
   ghc-options:         -threaded -Wall
 
