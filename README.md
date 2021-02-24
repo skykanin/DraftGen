@@ -17,7 +17,7 @@ This adds everything listed in the `flake.nix` files `devShell` attribute to you
 ### Run
 On the first run you will be prompted to run `cabal update`.
 
-After that you can run the project with `cabal run`.
+After that you can run the project with `cabal run`. To pass command line arguments to cabal you run `cabal run -- <args go here>`.
 
 ### Build
 To build the project using cabal you can run
