@@ -1,8 +1,8 @@
 module Main where
 
-import CLI (Args, getRecord)
+import CLI (Args, Unwrapped, unwrapRecord)
 
 main :: IO ()
 main = do
-    x <- getRecord "Test Program"
-    print (x :: Args)
+    x <- unwrapRecord "Test Program"
+    print (x :: Args Unwrapped)

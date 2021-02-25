@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 
 {- |
@@ -13,15 +15,17 @@
 -}
 module CLI (
     Args,
-    getRecord,
+    Unwrapped,
+    unwrapRecord,
 ) where
 
 import Options.Generic
 
-data Args = Args
-    { set :: String <?> "The MTG set to generate cards from"
-    , amount :: Int <?> "Amount of booster packs to generate"
+data Args w = Args
+    { set :: w ::: String <!> "m21" <?> "The MTG set to generate cards from (default: m21)"
+    , amount :: w ::: Int <!> "6" <?> "Amount of booster packs to generate (default: 6)"
     }
-    deriving (Generic, Show)
+    deriving (Generic)
 
-instance ParseRecord Args
+instance ParseRecord (Args Wrapped)
+deriving instance Show (Args Unwrapped)
