@@ -10,8 +10,18 @@
 module Main where
 
 import CLI (Args, Unwrapped, unwrapRecord)
+import Generate (dummyTTS, encodeFile, filterByMTGSet, getLatestCards, readCards, size)
 
 main :: IO ()
 main = do
-    x <- unwrapRecord ""
-    print (x :: Args Unwrapped)
+  encodeFile "data/testing.json" dummyTTS
+  putStrLn "DONE"
+
+-- main :: IO ()
+-- main = (either print pure =<<) $ runExceptT $ do
+--   x <- ExceptT unwrapRecord ""
+--   let args :: Args Unwrapped
+--       args = x
+--   filePath <- ExceptT getLatestCards
+--   cards <- ExceptT $ readCards filePath
+--   lift $ print $ size $ filterByMTGSet "m21" cards

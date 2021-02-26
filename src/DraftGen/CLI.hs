@@ -14,19 +14,20 @@
  Command line arguments parsing module
 -}
 module CLI (
-    Args,
-    Unwrapped,
-    unwrapRecord,
+  Args,
+  Unwrapped,
+  unwrapRecord,
 ) where
 
 import Options.Generic
 
 data Args w = Args
-    { set :: w ::: String <!> "m21" <?> "The MTG set to generate cards from (default: m21)"
-    , amount :: w ::: Int <!> "6" <?> "Amount of booster packs to generate (default: 6)"
-    , directory :: w ::: String <!> "Booster Packs" <?> "Path to output directory (default: Booster Packs)"
-    }
-    deriving (Generic)
+  { set :: w ::: String <!> "m21" <?> "The MTG set to generate cards from (default: m21)"
+  , amount :: w ::: Int <!> "6" <?> "Amount of booster packs to generate (default: 6)"
+  , directory :: w ::: String <!> "Booster Packs" <?> "Path to output directory (default: Booster Packs)"
+  }
+  deriving (Generic)
 
 instance ParseRecord (Args Wrapped)
+
 deriving instance Show (Args Unwrapped)
