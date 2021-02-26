@@ -29,6 +29,7 @@
           hs.fourmolu
         ];
         libraries = [
+          zlib
         ];
         libraryPath = "${makeLibraryPath libraries}";
       in
