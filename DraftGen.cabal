@@ -26,6 +26,7 @@ executable dg
   hs-source-dirs:      src
   build-depends:       base ^>= 4.14.1.0
                      , dg-lib
+                     , transformers ^>= 0.5.6.2
   ghc-options:         -threaded -Wall -O2
 
 library dg-lib
@@ -41,6 +42,7 @@ library dg-lib
                      , optparse-generic ^>= 1.4.4
                      , random ^>= 1.2.0
                      , text ^>= 1.2.4.1
+                     , transformers ^>= 0.5.6.2
                      , unordered-containers ^>= 0.2.13.0
                      , vector ^>= 0.12.2.0
                      , wreq ^>= 0.5.3.3

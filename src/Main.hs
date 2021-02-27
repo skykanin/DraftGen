@@ -9,19 +9,19 @@
 -}
 module Main where
 
-import CLI (Args, Unwrapped, unwrapRecord)
-import Generate (dummyTTS, encodeFile, filterByMTGSet, getLatestCards, readCards, size)
+import CLI (Args, Unwrapped, fromArgs, unwrapRecord)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Except
+import Generate (encodeAsTTSObj, encodeFile, genPack, getLatestCards, readCards)
 
 main :: IO ()
-main = do
-  encodeFile "data/testing.json" dummyTTS
-  putStrLn "DONE"
-
--- main :: IO ()
--- main = (either print pure =<<) $ runExceptT $ do
---   x <- ExceptT unwrapRecord ""
---   let args :: Args Unwrapped
---       args = x
---   filePath <- ExceptT getLatestCards
---   cards <- ExceptT $ readCards filePath
---   lift $ print $ size $ filterByMTGSet "m21" cards
+main = (either print pure =<<) $
+  runExceptT $ do
+    x <- liftIO $ unwrapRecord ""
+    let args :: Args Unwrapped
+        args = x
+    filePath <- ExceptT getLatestCards
+    cards <- ExceptT $ readCards "data/BulkData.json"
+    selectedCards <- liftIO $ genPack (fromArgs args) cards
+    _ <- liftIO $ encodeFile "data/pack.json" $ encodeAsTTSObj selectedCards
+    liftIO $ putStrLn "DONE"

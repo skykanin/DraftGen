@@ -10,7 +10,7 @@
    Stability   : alpha
    Portability : portable
 
- Module defining the JSON types
+ Module defining the data types representing cards
 -}
 module Types where
 
@@ -22,8 +22,26 @@ import Data.Hashable (Hashable)
 import Data.Text (pack, unpack)
 import GHC.Generics
 
+type Numerator = Int
+
+type Denominator = Int
+
+type Ratio = (Numerator, Denominator)
+
+data PackConfig = PackConfig
+  { packConfigSet :: String
+  , packConfigCommons :: Int
+  , packConfigUncommons :: Int
+  , packConfigRareOrMythics :: Int
+  , packConfigMythicChance :: Ratio
+  , packConfigFoilChance :: Ratio
+  }
+  deriving (Show)
+
+makeFields ''PackConfig
+
 data Rarity = Common | Uncommon | Rare | Mythic
-  deriving (Eq, Generic, Show)
+  deriving (Enum, Eq, Generic, Show)
 
 instance Hashable Rarity
 
@@ -60,18 +78,25 @@ data CardObj = CardObj
   { cardObjId :: String
   , cardObjName :: String
   , cardObjLang :: String
+  , cardObjLayout :: String
   , cardObjHighresImage :: Bool
   , cardObjImageUris :: Maybe UriObj
   , cardObjTypeLine :: String
   , cardObjSet :: String
   , cardObjCmc :: Double
+  , cardObjFoil :: Bool
   , cardObjRarity :: Rarity
   }
-  deriving (Eq, Generic, Show)
+  deriving (Generic, Show)
 
 makeFields ''CardObj
 
 instance Hashable CardObj
+
+-- | Check card equality only by name
+instance Eq CardObj where
+  cardObjA == cardObjB =
+    cardObjA ^. name == cardObjB ^. name
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
@@ -79,11 +104,13 @@ instance FromJSON CardObj where
       <$> v .: "id"
       <*> v .: "name"
       <*> v .: "lang"
+      <*> v .: "layout"
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
       <*> v .: "type_line"
       <*> v .: "set"
       <*> v .: "cmc"
+      <*> v .: "foil"
       <*> v .: "rarity"
 
 data BulkDataObj = BulkDataObj
@@ -103,31 +130,6 @@ instance FromJSON BulkDataObj where
       <*> v .: "type"
       <*> v .: "name"
       <*> v .: "download_uri"
-
-newtype TTSObj = TTSObj
-  {objectStates :: [GameObj]}
-  deriving (Generic, Show)
-
-instance ToJSON TTSObj
-
-data GameObj = GameObj
-  { gameObjTransform :: TransformObj
-  , gameObjName :: String
-  , gameObjCustomDeck :: [CardImgObj]
-  , gameObjDeckIDs :: [Int]
-  , gameObjContainedObjects :: [TTSCardObj]
-  }
-  deriving (Generic, Show)
-
-instance ToJSON GameObj where
-  toJSON (GameObj t n cd dIds co) =
-    object
-      [ "transform" .= t
-      , "name" .= n
-      , "customDeck" .= toObject cd
-      , "deckIDs" .= dIds
-      , "containedObjects" .= co
-      ]
 
 toObject :: [CardImgObj] -> Value
 toObject = Object . go 1 M.empty
@@ -154,22 +156,6 @@ data ObjType = Card
 instance ToJSON ObjType where
   toJSON Card = String "Card"
 
-data TTSCardObj = TTSCardObj
-  { ttsCardObjTransform :: TransformObj
-  , ttsCardObjNickname :: String
-  , ttsCardObjName :: ObjType
-  , ttsCardObjCardID :: Int
-  }
-  deriving (Generic, Show)
-
-instance ToJSON TTSCardObj where
-  toJSON =
-    genericToJSON $
-      defaultOptions {fieldLabelModifier = lower . drop 10}
-    where
-      lower [] = []
-      lower (x : xs) = toLower x : xs
-
 data TransformObj = TransformObj
   { _scaleZ :: Int
   , _scaleY :: Int
@@ -188,5 +174,54 @@ makeFieldsNoPrefix ''TransformObj
 instance ToJSON TransformObj where
   toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = tail}
 
-tObj :: TransformObj
-tObj = TransformObj 1 1 1 180 180 0 0 0 0
+cardTransform :: TransformObj
+cardTransform = TransformObj 1 1 1 180 180 0 0 0 0
+
+gameTransform :: TransformObj
+gameTransform = TransformObj 1 1 1 180 180 0 0 1 0
+
+data TTSCardObj = TTSCardObj
+  { ttsCardObjTransform :: TransformObj
+  , ttsCardObjNickname :: String
+  , ttsCardObjName :: ObjType
+  , ttsCardObjCardID :: Int
+  }
+  deriving (Generic, Show)
+
+instance ToJSON TTSCardObj where
+  toJSON =
+    genericToJSON $
+      defaultOptions {fieldLabelModifier = lower . drop 10}
+    where
+      lower [] = []
+      lower (x : xs) = toLower x : xs
+
+data GameObj = GameObj
+  { gameObjTransform :: TransformObj
+  , gameObjName :: String
+  , gameObjCustomDeck :: [CardImgObj]
+  , gameObjDeckIDs :: [Int]
+  , gameObjContainedObjects :: [TTSCardObj]
+  }
+  deriving (Generic, Show)
+
+makeFields ''GameObj
+
+instance ToJSON GameObj where
+  toJSON (GameObj t n cd dIds co) =
+    object
+      [ "transform" .= t
+      , "name" .= n
+      , "customDeck" .= toObject cd
+      , "deckIDs" .= dIds
+      , "containedObjects" .= co
+      ]
+
+newtype TTSObj = TTSObj
+  {_objectStates :: [GameObj]}
+  deriving (Generic, Show)
+
+makeFieldsNoPrefix ''TTSObj
+
+instance ToJSON TTSObj where
+  toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = tail}
