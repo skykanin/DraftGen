@@ -10,22 +10,22 @@
  Generate packs
 -}
 module Generate (
-  encodeAsTTSObj,
   encodeFile,
   filterBySet,
-  genPack,
+  genPacks,
   getLatestCards,
   readCards,
   S.size,
 ) where
 
 import Control.Lens hiding (set)
+import Control.Monad (replicateM)
 import Data.Aeson (eitherDecode, eitherDecodeFileStrict, encodeFile)
 import qualified Data.ByteString.Lazy as B
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
-import Data.List (isPrefixOf)
-import Data.Maybe (fromMaybe)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.Maybe (isJust)
 import Network.Wreq
 import System.Random
 import Types
@@ -58,7 +58,10 @@ notDesired :: [String]
 notDesired = ["planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
 
 filterDesired :: HashSet CardObj -> HashSet CardObj
-filterDesired = S.filter (\card -> card ^. layout `notElem` notDesired)
+filterDesired = S.filter (\card -> desired card && hasFaceURL card)
+  where
+    desired card = card ^. layout `notElem` notDesired
+    hasFaceURL card = isJust $ card ^. imageUris
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
@@ -69,8 +72,10 @@ data Include = In | Out
 -- | Filter on MTG basic lands
 filterBasicLands :: Include -> HashSet CardObj -> HashSet CardObj
 filterBasicLands incl =
-  S.filter (\card -> p incl $ "Basic Land" `isPrefixOf` (card ^. typeLine))
+  S.filter (\card -> p incl $ checkBasic card && checkLand card)
   where
+    checkBasic c = "Basic" `isPrefixOf` (c ^. typeLine)
+    checkLand c = "Land" `isInfixOf` (c ^. typeLine)
     p In = Prelude.id
     p Out = not
 
@@ -98,11 +103,18 @@ commonWithMaybeFoil (numerator, denominator) amount commonSet foilSet = do
       commonCards <- gen (amount - 1) commonSet
       pure $ commonCards `S.union` foilCard
 
+type Amount = Int
+
+-- | Plural of genPack
+genPacks :: Amount -> PackConfig -> HashSet CardObj -> IO [HashSet CardObj]
+genPacks amount config cards = replicateM amount (genPack config cards)
+
 -- | Generate a random pack based on the pack configuration
 genPack :: PackConfig -> HashSet CardObj -> IO (HashSet CardObj)
 genPack config cards = do
-  let setCards = filterBySet (config ^. set) cards
+  let setCards = english . filterBySet (config ^. set) $ cards
       base = filterDesired . filterBasicLands Out $ setCards
+      english = S.filter (\c -> c ^. lang == "en")
       fbr r = filterByRarity r base
       foils = S.filter (^. foil) base
       lands = filterBasicLands In setCards
@@ -124,53 +136,3 @@ gen amount cards = go amount cards S.empty
         rand <- getStdRandom (randomR (0, S.size pool - 1))
         let card = S.toList pool !! rand
         go (n - 1) (S.delete card pool) (S.insert card acc)
-
--- | Transform set of cards into a tabletop simulator compliant data type
-encodeAsTTSObj :: HashSet CardObj -> TTSObj
-encodeAsTTSObj = go defaultTTSObj 100 . S.toList
-  where
-    go ttsObj _ [] = ttsObj
-    go ttsObj cardId (cardObj : xs) =
-      go updatedTTSObj (cardId + 100) xs
-      where
-        reachGameObj = objectStates . _head
-        updatedTTSObj =
-          ttsObj
-            & reachGameObj . customDeck <>~ [mkCardImgObj cardObj]
-            & reachGameObj . deckIDs <>~ [cardId]
-            & reachGameObj . containedObjects <>~ [mkTTSCardObj cardId cardObj]
-
-mkTTSCardObj :: Int -> CardObj -> TTSCardObj
-mkTTSCardObj cardId cardObj =
-  TTSCardObj
-    { ttsCardObjTransform = cardTransform
-    , ttsCardObjNickname = cardObj ^. name
-    , ttsCardObjName = Card
-    , ttsCardObjCardID = cardId
-    }
-
-mkCardImgObj :: CardObj -> CardImgObj
-mkCardImgObj cardObj =
-  CardImgObj
-    { backIsHidden = True
-    , numWidth = 1
-    , numHeight = 1
-    , backURL = "https://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-card_back.jpg"
-    , faceURL =
-        fromMaybe (error "No faceURL") $
-          cardObj ^? imageUris . _Just . large
-    }
-
-defaultTTSObj :: TTSObj
-defaultTTSObj =
-  TTSObj
-    { _objectStates =
-        [ GameObj
-            { gameObjTransform = gameTransform
-            , gameObjName = "DeckCustom"
-            , gameObjCustomDeck = []
-            , gameObjDeckIDs = []
-            , gameObjContainedObjects = []
-            }
-        ]
-    }

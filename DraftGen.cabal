@@ -32,6 +32,7 @@ executable dg
 library dg-lib
   import:              shared-properties
   exposed-modules:     CLI
+                     , Encode
                      , Generate
                      , Types
   build-depends:       base ^>= 4.14.1.0

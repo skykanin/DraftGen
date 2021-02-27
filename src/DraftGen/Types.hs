@@ -174,12 +174,6 @@ makeFieldsNoPrefix ''TransformObj
 instance ToJSON TransformObj where
   toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = tail}
 
-cardTransform :: TransformObj
-cardTransform = TransformObj 1 1 1 180 180 0 0 0 0
-
-gameTransform :: TransformObj
-gameTransform = TransformObj 1 1 1 180 180 0 0 1 0
-
 data TTSCardObj = TTSCardObj
   { ttsCardObjTransform :: TransformObj
   , ttsCardObjNickname :: String

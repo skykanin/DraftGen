@@ -17,6 +17,7 @@ module CLI (
   Args,
   Unwrapped,
   fromArgs,
+  getAmount,
   unwrapRecord,
 ) where
 
@@ -54,3 +55,6 @@ instance ParseField (Int, Int)
 
 fromArgs :: Args Unwrapped -> PackConfig
 fromArgs (Args s _ c uc r mc fc _ _) = PackConfig s c uc r mc fc
+
+getAmount :: Args Unwrapped -> Int
+getAmount (Args _ amt _ _ _ _ _ _ _) = amt

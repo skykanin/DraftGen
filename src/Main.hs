@@ -9,10 +9,11 @@
 -}
 module Main where
 
-import CLI (Args, Unwrapped, fromArgs, unwrapRecord)
+import CLI (Args, Unwrapped, fromArgs, getAmount, unwrapRecord)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
-import Generate (encodeAsTTSObj, encodeFile, genPack, getLatestCards, readCards)
+import Encode (encodePacks)
+import Generate (encodeFile, genPacks, getLatestCards, readCards)
 
 main :: IO ()
 main = (either print pure =<<) $
@@ -22,6 +23,6 @@ main = (either print pure =<<) $
         args = x
     filePath <- ExceptT getLatestCards
     cards <- ExceptT $ readCards filePath
-    selectedCards <- liftIO $ genPack (fromArgs args) cards
-    _ <- liftIO $ encodeFile "data/pack.json" $ encodeAsTTSObj selectedCards
+    selectedCards <- liftIO $ genPacks (getAmount args) (fromArgs args) cards
+    _ <- liftIO $ encodeFile "data/packs.json" $ encodePacks selectedCards
     liftIO $ putStrLn "DONE"
