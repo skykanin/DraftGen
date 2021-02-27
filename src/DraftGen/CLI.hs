@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -42,9 +41,9 @@ instance ParseRecord (Args Wrapped)
 deriving instance Show (Args Unwrapped)
 
 -- | Orphaned instances for parsing tuple fields
-deriving instance ParseFields (Int, Int)
+instance ParseFields (Int, Int)
 
-deriving instance ParseField (Int, Int)
+instance ParseField (Int, Int)
 
 fromArgs :: Args Unwrapped -> PackConfig
 fromArgs (Args s _ c uc r mc fc _ _) = PackConfig s c uc r mc fc
