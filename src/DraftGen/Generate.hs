@@ -78,17 +78,17 @@ filterBasicLands incl =
 pickRarity :: Ratio -> IO Rarity
 pickRarity (numerator, denominator) = do
   chance <- getStdRandom (randomR (1, denominator))
-  pure $ if chance >= numerator then Rare else Mythic
+  pure $ if chance > numerator then Rare else Mythic
 
 -- | List of all the MTG rarities
 rarities :: [Rarity]
 rarities = [Common .. Mythic]
 
--- | Generate cards of common rarity with chance of one being a foil of any rarity
+-- | Generate cards of common rarity with a chance of one being a foil of any rarity
 commonWithMaybeFoil :: Ratio -> Int -> HashSet CardObj -> HashSet CardObj -> IO (HashSet CardObj)
 commonWithMaybeFoil (numerator, denominator) amount commonSet foilSet = do
   chance <- getStdRandom (randomR (1, denominator))
-  if chance >= numerator
+  if chance > numerator
     then gen amount commonSet
     else do
       randRarity <- getStdRandom (randomR (0, 3))
@@ -125,6 +125,7 @@ gen amount cards = go amount cards S.empty
         let card = S.toList pool !! rand
         go (n - 1) (S.delete card pool) (S.insert card acc)
 
+-- | Transform set of cards into a tabletop simulator compliant data type
 encodeAsTTSObj :: HashSet CardObj -> TTSObj
 encodeAsTTSObj = go defaultTTSObj 100 . S.toList
   where
