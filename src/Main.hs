@@ -21,7 +21,7 @@ main = (either print pure =<<) $
     let args :: Args Unwrapped
         args = x
     filePath <- ExceptT getLatestCards
-    cards <- ExceptT $ readCards "data/BulkData.json"
+    cards <- ExceptT $ readCards filePath
     selectedCards <- liftIO $ genPack (fromArgs args) cards
     _ <- liftIO $ encodeFile "data/pack.json" $ encodeAsTTSObj selectedCards
     liftIO $ putStrLn "DONE"
