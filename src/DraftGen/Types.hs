@@ -24,7 +24,8 @@ import Data.Text (pack, unpack)
 import GHC.Generics
 
 data PackConfig = PackConfig
-  { packConfigSet :: String
+  { packConfigAmount :: Int
+  , packConfigSet :: String
   , packConfigCommons :: Int
   , packConfigUncommons :: Int
   , packConfigRareOrMythics :: Int
@@ -36,10 +37,7 @@ data PackConfig = PackConfig
 makeFields ''PackConfig
 
 fromArgs :: Args Unwrapped -> PackConfig
-fromArgs (Args s _ c uc r mc fc _ _) = PackConfig s c uc r mc fc
-
-getAmount :: Args Unwrapped -> Int
-getAmount (Args _ amt _ _ _ _ _ _ _) = amt
+fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
 
 data Rarity = Common | Uncommon | Rare | Mythic
   deriving (Enum, Eq, Generic, Show)
@@ -86,6 +84,9 @@ data CardObj = CardObj
   , cardObjSet :: String
   , cardObjCmc :: Double
   , cardObjFoil :: Bool
+  , cardObjPromo :: Bool
+  , cardObjReprint :: Bool
+  , cardObjVariation :: Bool
   , cardObjRarity :: Rarity
   }
   deriving (Generic, Show)
@@ -112,6 +113,9 @@ instance FromJSON CardObj where
       <*> v .: "set"
       <*> v .: "cmc"
       <*> v .: "foil"
+      <*> v .: "promo"
+      <*> v .: "reprint"
+      <*> v .: "variation"
       <*> v .: "rarity"
 
 data BulkDataObj = BulkDataObj
