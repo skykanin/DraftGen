@@ -14,19 +14,14 @@
 -}
 module Types where
 
-import Control.Lens hiding ((.=))
+import CLI (Args (..), Ratio, Unwrapped)
+import Control.Lens hiding (Unwrapped, (.=))
 import Data.Aeson
 import Data.Char (toLower)
 import Data.HashMap.Strict as M
 import Data.Hashable (Hashable)
 import Data.Text (pack, unpack)
 import GHC.Generics
-
-type Numerator = Int
-
-type Denominator = Int
-
-type Ratio = (Numerator, Denominator)
 
 data PackConfig = PackConfig
   { packConfigSet :: String
@@ -36,9 +31,15 @@ data PackConfig = PackConfig
   , packConfigMythicChance :: Ratio
   , packConfigFoilChance :: Ratio
   }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeFields ''PackConfig
+
+fromArgs :: Args Unwrapped -> PackConfig
+fromArgs (Args s _ c uc r mc fc _ _) = PackConfig s c uc r mc fc
+
+getAmount :: Args Unwrapped -> Int
+getAmount (Args _ amt _ _ _ _ _ _ _) = amt
 
 data Rarity = Common | Uncommon | Rare | Mythic
   deriving (Enum, Eq, Generic, Show)

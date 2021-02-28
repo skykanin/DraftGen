@@ -9,11 +9,12 @@
 -}
 module Main where
 
-import CLI (Args, Unwrapped, fromArgs, getAmount, unwrapRecord)
+import CLI (Args, Unwrapped, unwrapRecord)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Encode (encodePacks)
 import Generate (encodeFile, genPacks, getLatestCards, readCards)
+import Types (fromArgs, getAmount)
 
 main :: IO ()
 main = (either print pure =<<) $

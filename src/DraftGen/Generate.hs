@@ -18,6 +18,7 @@ module Generate (
   S.size,
 ) where
 
+import CLI (Ratio (..))
 import Control.Lens hiding (set)
 import Control.Monad (replicateM)
 import Data.Aeson (eitherDecode, eitherDecodeFileStrict, encodeFile)
@@ -81,7 +82,7 @@ filterBasicLands incl =
 
 -- | Pick a rarity to choose from based on the mythic drop chance in the pack configuration
 pickRarity :: Ratio -> IO Rarity
-pickRarity (numerator, denominator) = do
+pickRarity (Ratio numerator denominator) = do
   chance <- getStdRandom (randomR (1, denominator))
   pure $ if chance > numerator then Rare else Mythic
 
@@ -91,7 +92,7 @@ rarities = [Common .. Mythic]
 
 -- | Generate cards of common rarity with a chance of one being a foil of any rarity
 commonWithMaybeFoil :: Ratio -> Int -> HashSet CardObj -> HashSet CardObj -> IO (HashSet CardObj)
-commonWithMaybeFoil (numerator, denominator) amount commonSet foilSet = do
+commonWithMaybeFoil (Ratio numerator denominator) amount commonSet foilSet = do
   chance <- getStdRandom (randomR (1, denominator))
   if chance > numerator
     then gen amount commonSet
