@@ -92,7 +92,7 @@ mkCardImgObj cardObj =
     , backURL = "https://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-card_back.jpg"
     , faceURL =
         fromMaybe (error "No faceURL") $
-          cardObj ^? imageUris . _Just . large
+          cardObj ^? imageUris . _Just . png
     }
 
 mkEmptyPack :: TransformObj -> GameObj
