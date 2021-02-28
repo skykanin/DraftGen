@@ -12,6 +12,7 @@
 module Generate (
   encodeFile,
   filterBySet,
+  genLands,
   genPacks,
   getLatestCards,
   readCards,
@@ -34,13 +35,19 @@ import Types
 -- | Get the latest card set from scryfall and write them to a json file
 getLatestCards :: IO (Either String FilePath)
 getLatestCards = do
-  r <- get "https://api.scryfall.com/bulk-data/default-cards"
+  l <- get "https://api.scryfall.com/bulk-data/default-cards"
+  r <- get "https://api.scryfall.com/bulk-data/oracle-cards"
   let eBd :: Either String BulkDataObj
       eBd = eitherDecode $ r ^. responseBody
-  case eBd of
-    Left err -> pure $ Left err
-    Right bulkData -> do
+      eLands :: Either String BulkDataObj
+      eLands = eitherDecode $ l ^. responseBody
+  case (eLands, eBd) of
+    (Left err, _) -> pure $ Left err
+    (_, Left err) -> pure $ Left err
+    (Right landData, Right bulkData) -> do
       binData <- get (bulkData ^. downloadUri)
+      landBinData <- get (landData ^. downloadUri)
+      B.writeFile "data/LandData.json" (landBinData ^. responseBody)
       B.writeFile "data/BulkData.json" (binData ^. responseBody)
       pure $ Right "data/BulkData.json"
 
@@ -59,8 +66,9 @@ notDesired :: [String]
 notDesired = ["planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
 
 filterDesired :: HashSet CardObj -> HashSet CardObj
-filterDesired = S.filter (\card -> desired card && hasFaceURL card)
+filterDesired = S.filter (\card -> desired card && hasFaceURL card && nonVar card)
   where
+    nonVar card = not $ card ^. variation
     desired card = card ^. layout `notElem` notDesired
     hasFaceURL card = isJust $ card ^. imageUris
 
@@ -92,48 +100,48 @@ rarities = [Common .. Mythic]
 
 -- | Generate cards of common rarity with a chance of one being a foil of any rarity
 commonWithMaybeFoil :: Ratio -> Int -> HashSet CardObj -> HashSet CardObj -> IO (HashSet CardObj)
-commonWithMaybeFoil (Ratio numerator denominator) amount commonSet foilSet = do
+commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
   chance <- getStdRandom (randomR (1, denominator))
   if chance > numerator
-    then gen amount commonSet
+    then gen n commonSet
     else do
       randRarity <- getStdRandom (randomR (0, 3))
       let selectedRarity = rarities !! randRarity
           filteredSet = filterByRarity selectedRarity foilSet
       foilCard <- gen 1 filteredSet
-      commonCards <- gen (amount - 1) commonSet
+      commonCards <- gen (n - 1) commonSet
       pure $ commonCards `S.union` foilCard
 
-type Amount = Int
-
 -- | Plural of genPack
-genPacks :: Amount -> PackConfig -> HashSet CardObj -> IO [HashSet CardObj]
-genPacks amount config cards = replicateM amount (genPack config cards)
+genPacks :: PackConfig -> HashSet CardObj -> IO [HashSet CardObj]
+genPacks config cards = replicateM (config ^. amount) (genPack config cards)
+
+-- | Return basic lands belonging to the data set
+genLands :: PackConfig -> HashSet CardObj -> [HashSet CardObj]
+genLands config = pure . filterBasicLands In . filterBySet (config ^. set)
 
 -- | Generate a random pack based on the pack configuration
 genPack :: PackConfig -> HashSet CardObj -> IO (HashSet CardObj)
 genPack config cards = do
-  let setCards = english . filterBySet (config ^. set) $ cards
-      base = filterDesired . filterBasicLands Out $ setCards
+  let setCards = filterDesired . english . filterBySet (config ^. set) $ cards
+      base = filterBasicLands Out setCards
       english = S.filter (\c -> c ^. lang == "en")
       fbr r = filterByRarity r base
       foils = S.filter (^. foil) base
-      lands = filterBasicLands In setCards
   commonWithMaybeFoilCards <-
     commonWithMaybeFoil (config ^. foilChance) (config ^. commons) (fbr Common) foils
   uncommonCards <- gen (config ^. uncommons) (fbr Uncommon)
   pick <- pickRarity (config ^. mythicChance)
   rareOrMythicCards <- gen (config ^. rareOrMythics) (fbr pick)
-  basicLand <- gen 1 lands
-  pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, basicLand]
+  pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
 
 -- | Generate set of n cards from set
 gen :: Int -> HashSet CardObj -> IO (HashSet CardObj)
-gen amount cards = go amount cards S.empty
+gen n cards = go n cards S.empty
   where
-    go n pool acc
-      | n <= 0 || S.null pool = pure acc
+    go i pool acc
+      | i <= 0 || S.null pool = pure acc
       | otherwise = do
         rand <- getStdRandom (randomR (0, S.size pool - 1))
         let card = S.toList pool !! rand
-        go (n - 1) (S.delete card pool) (S.insert card acc)
+        go (i - 1) (S.delete card pool) (S.insert card acc)
