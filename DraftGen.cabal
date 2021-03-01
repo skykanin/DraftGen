@@ -48,7 +48,6 @@ library dg-lib
                      , text ^>= 1.2.4.1
                      , transformers ^>= 0.5.6.2
                      , unordered-containers ^>= 0.2.13.0
-                     , vector ^>= 0.12.2.0
                      , wreq ^>= 0.5.3.3
   hs-source-dirs:      src/DraftGen
   ghc-options:         -Wall -Wredundant-constraints -Wno-name-shadowing -Wno-unticked-promoted-constructors
