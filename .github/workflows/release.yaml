@@ -82,10 +82,12 @@ jobs:
 
       - if: matrix.os == 'windows-latest'
         name: Set extension to .exe on Windows
-        run: echo "::set-env name=EXT::.exe"
+        run: |
+          name=EXT::.exe
 
       - name: Set binary path name
-        run: echo "::set-env name=BINARY_PATH::./dist/dg{{ env.EXT }}"
+        run: |
+          name=BINARY_PATH::./dist/dg${{ env.EXT }}
 
       - name: Compress binary
         uses: svenstaro/upx-action@2.0.1
