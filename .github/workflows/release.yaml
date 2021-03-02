@@ -102,7 +102,7 @@ jobs:
       - name: Get Release File Name & Upload URL
         id: get_release_info
         run: |
-          echo "UPLOAD_URL=$(cat release_url/release_url.txt)"
+          echo "upload_url=$(cat release_url/release_url.txt)"
 
       - name: Upload Release Asset
         id: upload-release-asset
