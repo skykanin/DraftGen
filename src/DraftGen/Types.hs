@@ -39,7 +39,7 @@ makeFields ''PackConfig
 fromArgs :: Args Unwrapped -> PackConfig
 fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
 
-data Rarity = Common | Uncommon | Rare | Mythic
+data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
   deriving (Enum, Eq, Generic, Show)
 
 instance Hashable Rarity
@@ -50,6 +50,8 @@ instance FromJSON Rarity where
     "uncommon" -> Uncommon
     "rare" -> Rare
     "mythic" -> Mythic
+    "special" -> Special
+    "bonus" -> Bonus
     _ -> error "Unexpected rarity string"
   parseJSON _ = error "Rarity is of unexpected type"
 
