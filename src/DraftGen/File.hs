@@ -20,6 +20,7 @@ import Generate (genLands, genPacks, readCards)
 import Network.Wreq (get, responseBody)
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, getXdgDirectory)
 import System.FilePath ((</>))
+import Text.Printf (printf)
 import Types (BulkDataObj, downloadUri, fromArgs)
 import Util (fileName)
 
@@ -58,7 +59,7 @@ execute = (either print pure =<<) $
     selectedCards <- liftIO $ genPacks config cards
     _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config landData
     _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-    liftIO $ putStrLn "DONE"
+    liftIO $ printf "Packs generated at: %s and lands at: %s" (dataPath </> pn) (dataPath </> ln)
 
 -- | Get the latest card set from scryfall and write them to a json file
 getLatestCards :: FilePath -> FilePath -> IO (Either String (FilePath, FilePath))
