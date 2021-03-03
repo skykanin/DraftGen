@@ -1,5 +1,9 @@
 name: Release
 
+defaults:
+  run:
+    shell: bash
+
 on:
   # Trigger the workflow on the new 'v*' tag created
   push:
@@ -86,11 +90,6 @@ jobs:
       - name: Set binary path name
         run: |
           echo "BINARY_PATH=$(find dist-newstyle \( -name 'dg' -o -name 'dg.exe' \) -type f)" >> $GITHUB_ENV
-
-      - name: Compress binary
-        uses: svenstaro/upx-action@2.0.1
-        with:
-          file: ${{ env.BINARY_PATH }}
 
       - name: Load Release URL File from release job
         uses: actions/download-artifact@v2
