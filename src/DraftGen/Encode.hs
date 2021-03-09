@@ -15,6 +15,7 @@ import Control.Lens
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
 import Data.Maybe (fromMaybe)
+import qualified Data.Sequence as Seq
 import Types
 
 -- | Map position data and set of cards into a GameObj representing a single pack
@@ -29,9 +30,9 @@ encodePack transformObj cardSet =
       where
         updatedPackObj =
           packObj
-            & customDeck <>~ [mkCardImgObj cardObj]
-            & deckIDs <>~ [cardId]
-            & containedObjects <>~ [mkTTSCardObj cardId cardObj]
+            & customDeck %~ (Seq.|> mkCardImgObj cardObj)
+            & deckIDs %~ (Seq.|> cardId)
+            & containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
 encodePacks :: [HashSet CardObj] -> TTSObj
@@ -100,9 +101,9 @@ mkEmptyPack transformObj =
   GameObj
     { gameObjTransform = transformObj
     , gameObjName = "DeckCustom"
-    , gameObjCustomDeck = []
-    , gameObjDeckIDs = []
-    , gameObjContainedObjects = []
+    , gameObjCustomDeck = Seq.empty
+    , gameObjDeckIDs = Seq.empty
+    , gameObjContainedObjects = Seq.empty
     }
 
 defaultTTSObj :: TTSObj
@@ -112,9 +113,9 @@ defaultTTSObj =
         [ GameObj
             { gameObjTransform = packTransform
             , gameObjName = "DeckCustom"
-            , gameObjCustomDeck = []
-            , gameObjDeckIDs = []
-            , gameObjContainedObjects = []
+            , gameObjCustomDeck = Seq.empty
+            , gameObjDeckIDs = Seq.empty
+            , gameObjContainedObjects = Seq.empty
             }
         ]
     }
