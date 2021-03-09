@@ -15,11 +15,12 @@
 module Types where
 
 import CLI (Args (..), Ratio, Unwrapped)
-import Control.Lens hiding (Unwrapped, (.=))
+import Control.Lens hiding (Empty, Unwrapped, (.=))
 import Data.Aeson
 import Data.Char (toLower)
 import Data.HashMap.Strict as M
 import Data.Hashable (Hashable)
+import Data.Sequence (Seq (..))
 import Data.Text (pack, unpack)
 import GHC.Generics
 
@@ -138,12 +139,12 @@ instance FromJSON BulkDataObj where
       <*> v .: "name"
       <*> v .: "download_uri"
 
-toObject :: [CardImgObj] -> Value
+toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
   where
-    go :: Int -> Object -> [CardImgObj] -> Object
-    go _ m [] = m
-    go n m (x : xs) =
+    go :: Int -> Object -> Seq CardImgObj -> Object
+    go _ m Empty = m
+    go n m (x :<| xs) =
       go (n + 1) (M.insert (pack $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
@@ -200,9 +201,9 @@ instance ToJSON TTSCardObj where
 data GameObj = GameObj
   { gameObjTransform :: TransformObj
   , gameObjName :: String
-  , gameObjCustomDeck :: [CardImgObj]
-  , gameObjDeckIDs :: [Int]
-  , gameObjContainedObjects :: [TTSCardObj]
+  , gameObjCustomDeck :: Seq CardImgObj
+  , gameObjDeckIDs :: Seq Int
+  , gameObjContainedObjects :: Seq TTSCardObj
   }
   deriving (Generic, Show)
 
