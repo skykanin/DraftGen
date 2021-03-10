@@ -25,3 +25,6 @@ To build the project using cabal you can run
 However if you want to build the executable through nix you can run
 `nix-build -A lastpass-tui.components.exes.lpt`
 The resulting executable will be under `./result/bin/lpt`
+
+### Retrieve changelog
+To get the changelog between the latest tagged commit and the previous tagged commit one can run `cabal run -z GenChangelog.hs` to print out the list.
