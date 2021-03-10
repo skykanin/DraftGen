@@ -59,7 +59,7 @@ execute = (either print pure =<<) $
     selectedCards <- liftIO $ genPacks config cards
     _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config landData
     _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-    liftIO $ printf "Packs generated at: %s and lands at: %s" (dataPath </> pn) (dataPath </> ln)
+    liftIO $ printf "Packs generated at: %s\nLands at: %s" (dataPath </> pn) (dataPath </> ln)
 
 -- | Get the latest card set from scryfall and write them to a json file
 getLatestCards :: FilePath -> FilePath -> IO (Either String (FilePath, FilePath))
