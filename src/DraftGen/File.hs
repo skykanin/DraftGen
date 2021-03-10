@@ -9,7 +9,7 @@
 -}
 module File (execute) where
 
-import CLI (Args, Unwrapped, unwrapRecord, updateCards)
+import CLI (Args (..), Unwrapped, unwrapRecord)
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
@@ -39,12 +39,20 @@ landName = "lands"
 packName :: FilePath
 packName = "packs"
 
+-- | Check that integer arguments aren't negative
+validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
+validateArgs as
+  | amount as < 1 = Left "Error: amount is less that one"
+  | commons as < 0 = Left "Error: commons is negative"
+  | uncommons as < 0 = Left "Error: uncommons is negative"
+  | rares as < 0 = Left "Error: rares is negative"
+  | otherwise = Right as
+
 execute :: IO ()
 execute = (either print pure =<<) $
   runExceptT $ do
     x <- liftIO $ unwrapRecord ""
-    let args :: Args Unwrapped
-        args = x
+    args <- ExceptT $ pure $ validateArgs x
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
     (landCache, cardCache) <-
