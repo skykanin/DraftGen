@@ -9,7 +9,7 @@
 -}
 module File (execute) where
 
-import CLI (Args, Unwrapped, unwrapRecord)
+import CLI (Args, Unwrapped, unwrapRecord, updateCards)
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
@@ -18,7 +18,7 @@ import qualified Data.ByteString.Lazy as B
 import Encode (encodePacks)
 import Generate (genLands, genPacks, readCards)
 import Network.Wreq (get, responseBody)
-import System.Directory (XdgDirectory (..), createDirectoryIfMissing, getXdgDirectory)
+import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
 import Types (BulkDataObj, downloadUri, fromArgs)
@@ -48,7 +48,7 @@ execute = (either print pure =<<) $
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
     (landCache, cardCache) <-
-      ExceptT $ getLatestCards (cachePath </> landCacheName) (cachePath </> cardCacheName)
+      ExceptT $ getFromCache (updateCards args) (cachePath </> landCacheName) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
     landData <- ExceptT $ readCards landCache
     let config = fromArgs args
@@ -59,7 +59,21 @@ execute = (either print pure =<<) $
     selectedCards <- liftIO $ genPacks config cards
     _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config landData
     _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-    liftIO $ printf "Packs generated at: %s and lands at: %s" (dataPath </> pn) (dataPath </> ln)
+    liftIO $ printf "Packs generated at: %s\nLands at: %s" (dataPath </> pn) (dataPath </> ln)
+
+-- | If land and card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
+getFromCache :: Bool -> FilePath -> FilePath -> IO (Either String (FilePath, FilePath))
+getFromCache force landPath cardPath = paths >>= choice'
+  where
+    choice' = uncurry (choice force)
+    paths = (,) <$> doesFileExist landPath <*> doesFileExist cardPath
+    choice toForce landExists cardExists
+      | toForce = updateCache
+      | landExists && cardExists = pure $ Right (landPath, cardPath)
+      | otherwise = updateCache
+      where
+        msg = putStrLn "Updating cache..."
+        updateCache = msg *> getLatestCards landPath cardPath
 
 -- | Get the latest card set from scryfall and write them to a json file
 getLatestCards :: FilePath -> FilePath -> IO (Either String (FilePath, FilePath))

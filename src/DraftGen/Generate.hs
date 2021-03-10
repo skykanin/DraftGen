@@ -14,7 +14,6 @@ module Generate (
   filterBySet,
   genLands,
   genPacks,
-  getLatestCards,
   readCards,
   S.size,
 ) where
@@ -22,34 +21,13 @@ module Generate (
 import CLI (Ratio (..))
 import Control.Lens hiding (set)
 import Control.Monad (replicateM)
-import Data.Aeson (eitherDecode, eitherDecodeFileStrict, encodeFile)
-import qualified Data.ByteString.Lazy as B
+import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust)
-import Network.Wreq
 import System.Random
 import Types
-
--- | Get the latest card set from scryfall and write them to a json file
-getLatestCards :: IO (Either String FilePath)
-getLatestCards = do
-  l <- get "https://api.scryfall.com/bulk-data/default-cards"
-  r <- get "https://api.scryfall.com/bulk-data/oracle-cards"
-  let eBd :: Either String BulkDataObj
-      eBd = eitherDecode $ r ^. responseBody
-      eLands :: Either String BulkDataObj
-      eLands = eitherDecode $ l ^. responseBody
-  case (eLands, eBd) of
-    (Left err, _) -> pure $ Left err
-    (_, Left err) -> pure $ Left err
-    (Right landData, Right bulkData) -> do
-      binData <- get (bulkData ^. downloadUri)
-      landBinData <- get (landData ^. downloadUri)
-      B.writeFile "data/LandData.json" (landBinData ^. responseBody)
-      B.writeFile "data/BulkData.json" (binData ^. responseBody)
-      pure $ Right "data/BulkData.json"
 
 -- | Read cards from filepath into memory
 readCards :: FilePath -> IO (Either String (HashSet CardObj))
