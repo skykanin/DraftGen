@@ -42,7 +42,7 @@ packName = "packs"
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
 validateArgs as
-  | amount as < 1 = Left "Error: amount is less that one"
+  | amount as < 1 = Left "Error: amount is less than one"
   | commons as < 0 = Left "Error: commons is negative"
   | uncommons as < 0 = Left "Error: uncommons is negative"
   | rares as < 0 = Left "Error: rares is negative"
