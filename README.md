@@ -1,4 +1,6 @@
 # DraftGen
+[![GitHub issues by-label](https://img.shields.io/github/workflow/status/skykanin/DraftGen/Release?logo=GitHub&style=for-the-badge)](https://github.com/skykanin/DraftGen/actions?query=workflow%3A%22Release%22) [![simple haskell ](https://img.shields.io/badge/Simple-Haskell-purple?style=for-the-badge)](https://www.simplehaskell.org/) [![license](https://img.shields.io/github/license/skykanin/DraftGen?color=%23BD0000&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
 An MTG booster pack generator for [Tabletop Simulator](https://store.steampowered.com/app/286160/Tabletop_Simulator/).
 
 # Documentation
