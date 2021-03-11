@@ -1,30 +1,32 @@
 # DraftGen
 An MTG booster pack generator for [Tabletop Simulator](https://store.steampowered.com/app/286160/Tabletop_Simulator/).
 
-## Develop
-### Prerequisites
+# Documentation
+![options](https://i.imgur.com/6PQYoGA.png)
+
+DraftGen lets you generate booster packs for MTG. The default options are set to simulate the rules and drop rates of regular booster packs. The default card set to generate packs from is the latest core set. These options can be changed by passing arguments through the command line. All arguments are listed in the help section `dg --help`. DraftGen will print the paths where the resulting json files are written depending upon your platform.
+
+# Develop
+## Prerequisites
 If you want to use the development environment includeded in this repository you
 will need to install [nix](https://nixos.org/download.html#nix-quick-install) and
 enable experimental features by running:
 - `nix-env -iA nixpkgs.nixFlakes`
 - `mkdir ~/.config/nix && echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf`
 
-### Start contributing!
+## Start contributing!
 Run `nix develop` to enter the development environment.
 
-This adds everything listed in the `flake.nix` files `devShell` attribute to your path.
+This adds everything listed in the `flake.nix` files `devShell` attribute to your path. It is also possible to automatically hook into this environment using `direnv` see instructions on how to set this up [here](https://github.com/direnv/direnv/wiki/Nix).
 
-### Run
+## Run
 On the first run you will be prompted to run `cabal update`.
 
-After that you can run the project with `cabal run`. To pass command line arguments to cabal you run `cabal run -- <args go here>`.
+After that you can run the project with `cabal run`. To pass command line arguments to cabal you run `cabal run <artifact> -- <args go here>`.
 
-### Build
+## Build
 To build the project using cabal you can run
 `cabal build [...opts]`
-However if you want to build the executable through nix you can run
-`nix-build -A lastpass-tui.components.exes.lpt`
-The resulting executable will be under `./result/bin/lpt`
 
-### Retrieve changelog
+## Retrieve changelog
 To get the changelog between the latest tagged commit and the previous tagged commit one can run `cabal run -z GenChangelog.hs` to print out the list.
