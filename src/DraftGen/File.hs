@@ -27,9 +27,6 @@ import Util (fileName)
 appName :: FilePath
 appName = "DraftGen"
 
-landCacheName :: FilePath
-landCacheName = "LandData.json"
-
 cardCacheName :: FilePath
 cardCacheName = "CardData.json"
 
@@ -55,10 +52,10 @@ execute = (either print pure =<<) $
     args <- ExceptT $ pure $ validateArgs x
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
-    (landCache, cardCache) <-
-      ExceptT $ getFromCache (updateCards args) (cachePath </> landCacheName) (cachePath </> cardCacheName)
+    cardCache <-
+      ExceptT $ getFromCache (updateCards args) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
-    landData <- ExceptT $ readCards landCache
+    landData <- ExceptT $ readCards cardCache
     let config = fromArgs args
         ln = fileName config landName
         pn = fileName config packName
@@ -69,35 +66,27 @@ execute = (either print pure =<<) $
     _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
     liftIO $ printf "Packs generated at: %s\nLands at: %s" (dataPath </> pn) (dataPath </> ln)
 
--- | If land and card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
-getFromCache :: Bool -> FilePath -> FilePath -> IO (Either String (FilePath, FilePath))
-getFromCache force landPath cardPath = paths >>= choice'
+-- | If card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
+getFromCache :: Bool -> FilePath -> IO (Either String FilePath)
+getFromCache force cardPath = doesFileExist cardPath >>= choice force
   where
-    choice' = uncurry (choice force)
-    paths = (,) <$> doesFileExist landPath <*> doesFileExist cardPath
-    choice toForce landExists cardExists
+    choice toForce cardsExists
       | toForce = updateCache
-      | landExists && cardExists = pure $ Right (landPath, cardPath)
+      | cardsExists = pure $ Right cardPath
       | otherwise = updateCache
       where
         msg = putStrLn "Updating cache..."
-        updateCache = msg *> getLatestCards landPath cardPath
+        updateCache = msg *> getLatestCards cardPath
 
--- | Get the latest card set from scryfall and write them to a json file
-getLatestCards :: FilePath -> FilePath -> IO (Either String (FilePath, FilePath))
-getLatestCards landPath bulkPath = do
-  l <- get "https://api.scryfall.com/bulk-data/default-cards"
-  r <- get "https://api.scryfall.com/bulk-data/oracle-cards"
-  let eBd :: Either String BulkDataObj
-      eBd = eitherDecode $ r ^. responseBody
-      eLands :: Either String BulkDataObj
-      eLands = eitherDecode $ l ^. responseBody
-  case (eLands, eBd) of
-    (Left err, _) -> pure $ Left err
-    (_, Left err) -> pure $ Left err
-    (Right landData, Right bulkData) -> do
-      binData <- get (bulkData ^. downloadUri)
-      landBinData <- get (landData ^. downloadUri)
-      B.writeFile landPath (landBinData ^. responseBody)
-      B.writeFile bulkPath (binData ^. responseBody)
-      pure $ Right (landPath, bulkPath)
+-- | Get the latest card set from scryfall and write it to a json file
+getLatestCards :: FilePath -> IO (Either String FilePath)
+getLatestCards cardPath = do
+  c <- get "https://api.scryfall.com/bulk-data/default-cards"
+  let eCards :: Either String BulkDataObj
+      eCards = eitherDecode $ c ^. responseBody
+  case eCards of
+    Left err -> pure $ Left err
+    Right cardData -> do
+      cardBinData <- get (cardData ^. downloadUri)
+      B.writeFile cardPath (cardBinData ^. responseBody)
+      pure $ Right cardPath
