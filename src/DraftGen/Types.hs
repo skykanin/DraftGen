@@ -54,8 +54,11 @@ data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
 instance Hashable Rarity
 
 instance FromJSON Rarity where
-  parseJSON = genericParseJSON defaultOptions
-                { constructorTagModifier = toLowerCase }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase
+        }
 
 data UriObj = UriObj
   { uriObjSmall :: String
@@ -77,14 +80,47 @@ instance FromJSON UriObj where
       <*> v .: "large"
       <*> v .: "png"
 
+data FrameEffect
+  = Legendary
+  | Miracle
+  | Nyxborn
+  | Nyxtouched
+  | Draft
+  | Devoid
+  | Tombstone
+  | Colorshifted
+  | Inverted
+  | SunMoonDfc
+  | CompassLandDfc
+  | OriginPwDfc
+  | MoonEldraziDfc
+  | WaxingAndWaningMoonDfc
+  | Showcase
+  | ExtendedArt
+  | Fullart
+  | Companion
+  | Etched
+  | Snow
+  deriving (Eq, Generic, Show)
+
+instance Hashable FrameEffect
+
+instance FromJSON FrameEffect where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase
+        }
+
 data CardObj = CardObj
   { cardObjId :: String
   , cardObjName :: String
   , cardObjLang :: String
-  , cardObjLayout :: String
+  , cardObjLayout :: String -- Make sum type for this
   , cardObjHighresImage :: Bool
   , cardObjImageUris :: Maybe UriObj
   , cardObjTypeLine :: String
+  , cardObjFrameEffects :: [FrameEffect]
   , cardObjSet :: String
   , cardObjCmc :: Double
   , cardObjFoil :: Bool
@@ -114,6 +150,7 @@ instance FromJSON CardObj where
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
       <*> v .: "type_line"
+      <*> v .:? "frame_effects" .!= []
       <*> v .: "set"
       <*> v .: "cmc"
       <*> v .: "foil"
