@@ -18,10 +18,10 @@ import CLI (Args (..), Ratio, Unwrapped)
 import Control.Lens hiding (Empty, Unwrapped, (.=))
 import Data.Aeson
 import Data.Char (toLower)
-import Data.HashMap.Strict as M
+import qualified Data.HashMap.Strict as M
 import Data.Hashable (Hashable)
 import Data.Sequence (Seq (..))
-import Data.Text (pack, unpack)
+import Data.Text (pack)
 import GHC.Generics
 
 data PackConfig = PackConfig
@@ -40,21 +40,25 @@ makeFields ''PackConfig
 fromArgs :: Args Unwrapped -> PackConfig
 fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
 
+-- Transforms PascalCase to snake_case
+toSnakeCase :: String -> String
+toSnakeCase = camelTo2 '_'
+
+-- Lowercase string
+toLowerCase :: String -> String
+toLowerCase = map toLower
+
 data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
   deriving (Enum, Eq, Generic, Show)
 
 instance Hashable Rarity
 
 instance FromJSON Rarity where
-  parseJSON (String s) = pure $ case unpack s of
-    "common" -> Common
-    "uncommon" -> Uncommon
-    "rare" -> Rare
-    "mythic" -> Mythic
-    "special" -> Special
-    "bonus" -> Bonus
-    _ -> error "Unexpected rarity string"
-  parseJSON _ = error "Rarity is of unexpected type"
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase
+        }
 
 data UriObj = UriObj
   { uriObjSmall :: String
@@ -76,14 +80,47 @@ instance FromJSON UriObj where
       <*> v .: "large"
       <*> v .: "png"
 
+data FrameEffect
+  = Legendary
+  | Miracle
+  | Nyxborn
+  | Nyxtouched
+  | Draft
+  | Devoid
+  | Tombstone
+  | Colorshifted
+  | Inverted
+  | SunMoonDfc
+  | CompassLandDfc
+  | OriginPwDfc
+  | MoonEldraziDfc
+  | WaxingAndWaningMoonDfc
+  | Showcase
+  | ExtendedArt
+  | Fullart
+  | Companion
+  | Etched
+  | Snow
+  deriving (Eq, Generic, Show)
+
+instance Hashable FrameEffect
+
+instance FromJSON FrameEffect where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase
+        }
+
 data CardObj = CardObj
   { cardObjId :: String
   , cardObjName :: String
   , cardObjLang :: String
-  , cardObjLayout :: String
+  , cardObjLayout :: String -- Make sum type for this
   , cardObjHighresImage :: Bool
   , cardObjImageUris :: Maybe UriObj
   , cardObjTypeLine :: String
+  , cardObjFrameEffects :: [FrameEffect]
   , cardObjSet :: String
   , cardObjCmc :: Double
   , cardObjFoil :: Bool
@@ -113,6 +150,7 @@ instance FromJSON CardObj where
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
       <*> v .: "type_line"
+      <*> v .:? "frame_effects" .!= []
       <*> v .: "set"
       <*> v .: "cmc"
       <*> v .: "foil"
