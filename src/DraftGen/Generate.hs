@@ -24,30 +24,43 @@ import Control.Monad (replicateM)
 import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
-import Data.List (isInfixOf, isPrefixOf)
+import Data.List (intersect, isInfixOf, isPrefixOf)
 import Data.Maybe (isJust)
 import System.Random
 import Types
 
 -- | Read cards from filepath into memory
-readCards :: FilePath -> IO (Either String (HashSet CardObj))
+readCards :: FilePath -> IO (Either String [CardObj])
 readCards fp = do
   eCards <- eitherDecodeFileStrict fp :: IO (Either String [CardObj])
-  pure $ S.fromList <$> eCards
+  pure $ eCards
 
 -- | Filter cards by MTG set predicate
 filterBySet :: String -> HashSet CardObj -> HashSet CardObj
-filterBySet setPred = S.filter (\card -> card ^. set == setPred)
+filterBySet mtgSet = S.filter (\card -> card ^. set == mtgSet)
 
 -- | Undesired card layouts
-notDesired :: [String]
-notDesired = ["planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
+unwantedLayout :: [String]
+unwantedLayout = ["planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
 
-filterDesired :: HashSet CardObj -> HashSet CardObj
-filterDesired = S.filter (\card -> desired card && hasFaceURL card && nonVar card)
+-- | No weird frame effects pls
+unwantedFrameEffects :: [FrameEffect]
+unwantedFrameEffects = [Draft, ExtendedArt, Showcase]
+
+filterDesired :: [CardObj] -> HashSet CardObj
+filterDesired =
+  S.fromList
+    . filter
+      ( \card ->
+          desiredLayout card
+            && desiredFrameEff card
+            && hasFaceURL card
+            && nonVar card
+      )
   where
     nonVar card = not $ card ^. variation
-    desired card = card ^. layout `notElem` notDesired
+    desiredLayout card = card ^. layout `notElem` unwantedLayout
+    desiredFrameEff card = (card ^. frameEffects) `intersect` unwantedFrameEffects == []
     hasFaceURL card = isJust $ card ^. imageUris
 
 -- | Filter cards by MTG rarity
@@ -91,17 +104,17 @@ commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
       pure $ commonCards `S.union` foilCard
 
 -- | Plural of genPack
-genPacks :: PackConfig -> HashSet CardObj -> IO [HashSet CardObj]
+genPacks :: PackConfig -> [CardObj] -> IO [HashSet CardObj]
 genPacks config cards = replicateM (config ^. amount) (genPack config cards)
 
 -- | Return basic lands belonging to the data set
-genLands :: PackConfig -> HashSet CardObj -> [HashSet CardObj]
-genLands config = pure . filterBasicLands In . filterBySet (config ^. set)
+genLands :: PackConfig -> [CardObj] -> [HashSet CardObj]
+genLands config = pure . filterBasicLands In . filterBySet (config ^. set) . S.fromList
 
 -- | Generate a random pack based on the pack configuration
-genPack :: PackConfig -> HashSet CardObj -> IO (HashSet CardObj)
+genPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
 genPack config cards = do
-  let setCards = filterDesired . english . filterBySet (config ^. set) $ cards
+  let setCards = english . filterBySet (config ^. set) . filterDesired $ cards
       base = filterBasicLands Out setCards
       english = S.filter (\c -> c ^. lang == "en")
       fbr r = filterByRarity r base
