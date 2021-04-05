@@ -53,7 +53,7 @@ execute = (either print pure =<<) $
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
     cardCache <-
-      ExceptT $ getFromCache (updateCards args) (cachePath </> cardCacheName)
+      ExceptT $ getFromCache (downloadCards args) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
     landData <- ExceptT $ readCards cardCache
     let config = fromArgs args
