@@ -14,6 +14,7 @@ module Generate (
   filterBySet,
   genLands,
   genPacks,
+  genTokens,
   readCards,
   S.size,
 ) where
@@ -24,7 +25,7 @@ import Control.Monad (replicateM)
 import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
-import Data.List (intersect, isInfixOf, isPrefixOf)
+import Data.List (intersect, isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Maybe (isJust)
 import System.Random
 import Types
@@ -69,6 +70,15 @@ filterByRarity rarPred = S.filter (\card -> card ^. rarity == rarPred)
 
 data Include = In | Out
 
+-- | Filter on MTG type line 'lesson'
+filterLesson :: Include -> HashSet CardObj -> HashSet CardObj
+filterLesson incl =
+  S.filter (\card -> p incl $ isLesson card)
+  where
+    isLesson c = "Lesson" `isSuffixOf` (c ^. typeLine)
+    p In = Prelude.id
+    p Out = not
+
 -- | Filter on MTG basic lands
 filterBasicLands :: Include -> HashSet CardObj -> HashSet CardObj
 filterBasicLands incl =
@@ -80,10 +90,15 @@ filterBasicLands incl =
     p Out = not
 
 -- | Pick a rarity to choose from based on the mythic drop chance in the pack configuration
-pickRarity :: Ratio -> IO Rarity
-pickRarity (Ratio numerator denominator) = do
+pickRareOrMythic :: Ratio -> IO Rarity
+pickRareOrMythic (Ratio numerator denominator) = do
   chance <- getStdRandom (randomR (1, denominator))
   pure $ if chance > numerator then Rare else Mythic
+
+pickRarity :: [Rarity] -> IO Rarity
+pickRarity rarityList = do
+  idx <- getStdRandom (randomR (0, length rarityList - 1))
+  pure $ rarityList !! idx
 
 -- | List of all the MTG rarities
 rarities :: [Rarity]
@@ -111,20 +126,54 @@ genPacks config cards = replicateM (config ^. amount) (genPack config cards)
 genLands :: PackConfig -> [CardObj] -> [HashSet CardObj]
 genLands config = pure . filterBasicLands In . filterBySet (config ^. set) . S.fromList
 
+-- | Generate the token cards for a given set
+genTokens :: PackConfig -> [CardObj] -> [HashSet CardObj]
+genTokens config = pure . filterBySet ('t' : config ^. set) . S.fromList
+
 -- | Generate a random pack based on the pack configuration
 genPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
 genPack config cards = do
-  let setCards = english . filterBySet (config ^. set) . filterDesired $ cards
-      base = filterBasicLands Out setCards
+  if config ^. set == "stx"
+    then genStrixhavenPack config cards
+    else do
+      let setCards = english . filterBySet (config ^. set) . filterDesired $ cards
+          base = filterBasicLands Out setCards
+          english = S.filter (\c -> c ^. lang == "en")
+          fbr r = filterByRarity r base
+          foils = S.filter (^. foil) base
+      commonWithMaybeFoilCards <-
+        commonWithMaybeFoil (config ^. foilChance) (config ^. commons) (fbr Common) foils
+      uncommonCards <- gen (config ^. uncommons) (fbr Uncommon)
+      pick <- pickRareOrMythic (config ^. mythicChance)
+      rareOrMythicCards <- gen (config ^. rareOrMythics) (fbr pick)
+      pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
+
+-- | Generate a strixhaven pack (has special rules)
+genStrixhavenPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
+genStrixhavenPack config cards = do
+  let stxCards = english . filterBySet (config ^. set) . filterDesired $ cards
+      baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
+      lessons = filterLesson In stxCards
+      staCards = english . filterBySet "sta" . S.fromList $ cards
       english = S.filter (\c -> c ^. lang == "en")
-      fbr r = filterByRarity r base
-      foils = S.filter (^. foil) base
+      fbr r = filterByRarity r baseNoLesson
+      foils = S.filter (^. foil) baseNoLesson
+  -- Lesson card is picked individually, therefore remove 1 of the common card pick
   commonWithMaybeFoilCards <-
-    commonWithMaybeFoil (config ^. foilChance) (config ^. commons) (fbr Common) foils
+    commonWithMaybeFoil (config ^. foilChance) (config ^. commons - 1) (fbr Common) foils
   uncommonCards <- gen (config ^. uncommons) (fbr Uncommon)
-  pick <- pickRarity (config ^. mythicChance)
+  pick <- pickRareOrMythic (config ^. mythicChance)
   rareOrMythicCards <- gen (config ^. rareOrMythics) (fbr pick)
-  pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
+  lesson <- genByRarity 1 [Common, Rare, Mythic] lessons
+  mysticalArchive <- genByRarity 1 [Uncommon .. Mythic] staCards
+  pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, lesson, mysticalArchive]
+
+-- | Generate set of cards filtered by rarity
+genByRarity :: Int -> [Rarity] -> HashSet CardObj -> IO (HashSet CardObj)
+genByRarity n rarityList cardSet = do
+  rarity <- pickRarity rarityList
+  cardSet' <- gen n (filterByRarity rarity cardSet)
+  pure cardSet'
 
 -- | Generate set of n cards from set
 gen :: Int -> HashSet CardObj -> IO (HashSet CardObj)
