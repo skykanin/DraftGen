@@ -11,6 +11,7 @@
 -}
 module Encode (encodeCard, encodePacks) where
 
+import Control.Applicative ((<|>))
 import Control.Lens
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
@@ -92,16 +93,23 @@ mkTTSCardObj cardId cardObj =
     , ttsCardObjCardID = cardId
     }
 
+defaultBackUri :: String
+defaultBackUri = "https://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-card_back.jpg"
+
 mkCardImgObj :: CardObj -> CardImgObj
 mkCardImgObj cardObj =
   CardImgObj
     { backIsHidden = True
     , numWidth = 1
     , numHeight = 1
-    , backURL = "https://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-card_back.jpg"
+    , backURL =
+        fromMaybe defaultBackUri $
+          cardObj ^? cardFaces . _last . imageUris . _Just . png
     , faceURL =
-        fromMaybe (error "No faceURL") $
-          cardObj ^? imageUris . _Just . png
+        -- First try to get image from card faces then try base image uri field, otherwise error
+        fromMaybe (error "No faceURL found") $
+          cardObj ^? cardFaces . _head . imageUris . _Just . png
+            <|> cardObj ^? imageUris . _Just . png
     }
 
 mkEmptyCard :: TransformObj -> GameObj

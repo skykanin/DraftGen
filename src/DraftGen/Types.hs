@@ -112,6 +112,20 @@ instance FromJSON FrameEffect where
         { constructorTagModifier = toLowerCase
         }
 
+data CardFace = CardFace
+  { cardFaceName :: String
+  , cardFaceImageUris :: Maybe UriObj
+  }
+  deriving (Generic, Show)
+
+makeFields ''CardFace
+
+instance Hashable CardFace
+
+instance FromJSON CardFace where
+  parseJSON = withObject "CardFace" $ \v ->
+    CardFace <$> v .: "name" <*> v .:? "image_uris"
+
 data CardObj = CardObj
   { cardObjId :: String
   , cardObjName :: String
@@ -119,6 +133,7 @@ data CardObj = CardObj
   , cardObjLayout :: String -- Make sum type for this
   , cardObjHighresImage :: Bool
   , cardObjImageUris :: Maybe UriObj
+  , cardObjCardFaces :: [CardFace]
   , cardObjTypeLine :: String
   , cardObjFrameEffects :: [FrameEffect]
   , cardObjSet :: String
@@ -149,6 +164,7 @@ instance FromJSON CardObj where
       <*> v .: "layout"
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
+      <*> v .:? "card_faces" .!= []
       <*> v .: "type_line"
       <*> v .:? "frame_effects" .!= []
       <*> v .: "set"
