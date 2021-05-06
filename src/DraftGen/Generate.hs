@@ -58,17 +58,12 @@ findCard query = find matchName . filterDesired
 
 -- | Filter out undesired cards
 filterDesired :: [CardObj] -> [CardObj]
-filterDesired =
-  filter
-    ( \card ->
-        desiredLayout card
-          && desiredFrameEff card
-          && nonVar card
-    )
+filterDesired = filter (\card -> all ($ card) [desiredLayout, nonVar, desiredFrameEff, notPromo])
   where
     nonVar card = not $ card ^. variation
     desiredLayout card = card ^. layout `notElem` unwantedLayout
     desiredFrameEff card = null ((card ^. frameEffects) `intersect` unwantedFrameEffects)
+    notPromo card = not $ card ^. promo
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
