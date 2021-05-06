@@ -23,6 +23,7 @@
         hs = haskell.packages.ghc8104;
         tools = [
           binutils-unwrapped
+          haskell-language-server
           hs.ghc
           hs.cabal-install
           hs.ghcid
