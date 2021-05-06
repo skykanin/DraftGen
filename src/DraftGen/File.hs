@@ -15,13 +15,13 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Data.Aeson (eitherDecode, encodeFile)
 import qualified Data.ByteString.Lazy as B
-import Encode (encodePacks)
-import Generate (genLands, genPacks, genTokens, readCards)
+import Encode (encodeCard, encodePacks)
+import Generate (findCard, genLands, genPacks, genTokens, readCards)
 import Network.Wreq (get, responseBody)
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
-import Types (BulkDataObj, downloadUri, fromArgs)
+import Types (BulkDataObj, CardObj, downloadUri, fromArgs)
 import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
 
 -- | Check that integer arguments aren't negative
@@ -43,17 +43,33 @@ execute = (either print pure =<<) $
     cardCache <-
       ExceptT $ getFromCache (downloadCards args) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
-    let config = fromArgs args
-        ln = fileName config landName
-        pn = fileName config packName
-        tn = fileName config tokenName
-    dataPath <- liftIO $ getXdgDirectory XdgData appName
-    _ <- liftIO $ createDirectoryIfMissing True dataPath
-    selectedCards <- liftIO $ genPacks config cards
-    _ <- liftIO $ encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
-    _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
-    _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-    liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
+    -- If argument is passed to a card search otherwise generate packs
+    case getCard args of
+      Just query -> liftIO $ searchCard query cards
+      Nothing -> do
+        let config = fromArgs args
+            ln = fileName config landName
+            pn = fileName config packName
+            tn = fileName config tokenName
+        dataPath <- liftIO $ getXdgDirectory XdgData appName
+        _ <- liftIO $ createDirectoryIfMissing True dataPath
+        selectedCards <- liftIO $ genPacks config cards
+        _ <- liftIO $ encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
+        _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
+        _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
+        liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
+
+-- | Find card and write to file if it exists
+searchCard :: String -> [CardObj] -> IO ()
+searchCard query cards = do
+  case findCard query cards of
+    Nothing -> putStrLn "Card not found"
+    Just card -> do
+      dataPath <- liftIO $ getXdgDirectory XdgData appName
+      let cardObj = encodeCard card
+          filePath = dataPath </> query ++ ".json"
+      encodeFile filePath cardObj
+      printf "Card generated at: %s" filePath
 
 -- | If card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
 getFromCache :: Bool -> FilePath -> IO (Either String FilePath)

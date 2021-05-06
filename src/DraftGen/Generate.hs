@@ -17,16 +17,17 @@ module Generate (
   genTokens,
   readCards,
   S.size,
+  findCard,
 ) where
 
 import CLI (Ratio (..))
 import Control.Lens hiding (set)
 import Control.Monad (replicateM)
 import Data.Aeson (eitherDecodeFileStrict, encodeFile)
+import Data.Char (toLower)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
-import Data.List (intersect, isInfixOf, isPrefixOf, isSuffixOf)
-import Data.Maybe (isJust)
+import Data.List (find, intersect, isInfixOf, isPrefixOf, isSuffixOf)
 import System.Random
 import Types
 
@@ -40,27 +41,34 @@ filterBySet mtgSet = S.filter (\card -> card ^. set == mtgSet)
 
 -- | Undesired card layouts
 unwantedLayout :: [String]
-unwantedLayout = ["planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
+unwantedLayout = ["art_series", "planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
 
 -- | No weird frame effects pls
 unwantedFrameEffects :: [FrameEffect]
 unwantedFrameEffects = [Draft, ExtendedArt, Showcase]
 
-filterDesired :: [CardObj] -> HashSet CardObj
+-- | Search for a card in the a set of cards
+findCard :: String -> [CardObj] -> Maybe CardObj
+findCard query = find matchName . filterDesired
+  where
+    matchName c = query' `isPrefixOf` cardName
+      where
+        query' = map toLower query
+        cardName = map toLower (c ^. name)
+
+-- | Filter out undesired cards
+filterDesired :: [CardObj] -> [CardObj]
 filterDesired =
-  S.fromList
-    . filter
-      ( \card ->
-          desiredLayout card
-            && desiredFrameEff card
-            && hasFaceURL card
-            && nonVar card
-      )
+  filter
+    ( \card ->
+        desiredLayout card
+          && desiredFrameEff card
+          && nonVar card
+    )
   where
     nonVar card = not $ card ^. variation
     desiredLayout card = card ^. layout `notElem` unwantedLayout
     desiredFrameEff card = null ((card ^. frameEffects) `intersect` unwantedFrameEffects)
-    hasFaceURL card = isJust $ card ^. imageUris
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
@@ -134,7 +142,7 @@ genPack config cards =
   if config ^. set == "stx"
     then genStrixhavenPack config cards
     else do
-      let setCards = english . filterBySet (config ^. set) . filterDesired $ cards
+      let setCards = english . filterBySet (config ^. set) . S.fromList . filterDesired $ cards
           base = filterBasicLands Out setCards
           english = S.filter (\c -> c ^. lang == "en")
           fbr r = filterByRarity r base
@@ -149,7 +157,7 @@ genPack config cards =
 -- | Generate a strixhaven pack (has special rules)
 genStrixhavenPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
 genStrixhavenPack config cards = do
-  let stxCards = english . filterBySet (config ^. set) . filterDesired $ cards
+  let stxCards = english . filterBySet (config ^. set) . S.fromList . filterDesired $ cards
       baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
       lessons = filterLesson In stxCards
       staCards = english . filterBySet "sta" . S.fromList $ cards

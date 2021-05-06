@@ -38,7 +38,7 @@ data PackConfig = PackConfig
 makeFields ''PackConfig
 
 fromArgs :: Args Unwrapped -> PackConfig
-fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
+fromArgs (Args s a c uc r mc fc _ _) = PackConfig a s c uc r mc fc
 
 -- Transforms PascalCase to snake_case
 toSnakeCase :: String -> String
@@ -239,7 +239,9 @@ instance ToJSON TTSCardObj where
 data GameObj = GameObj
   { gameObjTransform :: TransformObj
   , gameObjName :: String
+  , gameObjNickname :: Maybe String
   , gameObjCustomDeck :: Seq CardImgObj
+  , gameObjCardID :: Maybe Int
   , gameObjDeckIDs :: Seq Int
   , gameObjContainedObjects :: Seq TTSCardObj
   }
@@ -248,14 +250,19 @@ data GameObj = GameObj
 makeFields ''GameObj
 
 instance ToJSON GameObj where
-  toJSON (GameObj t n cd dIds co) =
-    object
+  toJSON (GameObj t n nn cd cId dIds co) =
+    object $
       [ "transform" .= t
       , "name" .= n
       , "customDeck" .= toObject cd
       , "deckIDs" .= dIds
       , "containedObjects" .= co
       ]
+        ++ cardIdField
+        ++ nicknameField
+    where
+      cardIdField = maybe [] (pure . ("CardID" .=)) cId
+      nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
   {_objectStates :: [GameObj]}

@@ -9,7 +9,7 @@
 
  Encoding for card representation as TTS object
 -}
-module Encode (encodePacks) where
+module Encode (encodeCard, encodePacks) where
 
 import Control.Lens
 import Data.HashSet (HashSet)
@@ -17,6 +17,14 @@ import qualified Data.HashSet as S
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as Seq
 import Types
+
+-- | Encode a single card
+encodeCard :: CardObj -> TTSObj
+encodeCard card =
+  withTTS $
+    mkEmptyCard cardTransform
+      & customDeck %~ (Seq.|> mkCardImgObj card)
+      & nickname ?~ card ^. name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
 encodePack :: TransformObj -> HashSet CardObj -> GameObj
@@ -96,15 +104,32 @@ mkCardImgObj cardObj =
           cardObj ^? imageUris . _Just . png
     }
 
+mkEmptyCard :: TransformObj -> GameObj
+mkEmptyCard transformObj =
+  GameObj
+    { gameObjTransform = transformObj
+    , gameObjName = "Card"
+    , gameObjNickname = Nothing
+    , gameObjCustomDeck = Seq.empty
+    , gameObjCardID = Just 100
+    , gameObjDeckIDs = Seq.empty
+    , gameObjContainedObjects = Seq.empty
+    }
+
 mkEmptyPack :: TransformObj -> GameObj
 mkEmptyPack transformObj =
   GameObj
     { gameObjTransform = transformObj
     , gameObjName = "DeckCustom"
+    , gameObjNickname = Nothing
     , gameObjCustomDeck = Seq.empty
+    , gameObjCardID = Nothing
     , gameObjDeckIDs = Seq.empty
     , gameObjContainedObjects = Seq.empty
     }
+
+withTTS :: GameObj -> TTSObj
+withTTS gameobj = TTSObj {_objectStates = [gameobj]}
 
 defaultTTSObj :: TTSObj
 defaultTTSObj =
@@ -113,7 +138,9 @@ defaultTTSObj =
         [ GameObj
             { gameObjTransform = packTransform
             , gameObjName = "DeckCustom"
+            , gameObjNickname = Nothing
             , gameObjCustomDeck = Seq.empty
+            , gameObjCardID = Nothing
             , gameObjDeckIDs = Seq.empty
             , gameObjContainedObjects = Seq.empty
             }
