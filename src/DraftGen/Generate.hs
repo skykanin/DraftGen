@@ -32,9 +32,7 @@ import Types
 
 -- | Read cards from filepath into memory
 readCards :: FilePath -> IO (Either String [CardObj])
-readCards fp = do
-  eCards <- eitherDecodeFileStrict fp :: IO (Either String [CardObj])
-  pure $ eCards
+readCards = eitherDecodeFileStrict
 
 -- | Filter cards by MTG set predicate
 filterBySet :: String -> HashSet CardObj -> HashSet CardObj
@@ -61,7 +59,7 @@ filterDesired =
   where
     nonVar card = not $ card ^. variation
     desiredLayout card = card ^. layout `notElem` unwantedLayout
-    desiredFrameEff card = (card ^. frameEffects) `intersect` unwantedFrameEffects == []
+    desiredFrameEff card = null ((card ^. frameEffects) `intersect` unwantedFrameEffects)
     hasFaceURL card = isJust $ card ^. imageUris
 
 -- | Filter cards by MTG rarity
@@ -73,7 +71,7 @@ data Include = In | Out
 -- | Filter on MTG type line 'lesson'
 filterLesson :: Include -> HashSet CardObj -> HashSet CardObj
 filterLesson incl =
-  S.filter (\card -> p incl $ isLesson card)
+  S.filter (p incl . isLesson)
   where
     isLesson c = "Lesson" `isSuffixOf` (c ^. typeLine)
     p In = Prelude.id
@@ -132,7 +130,7 @@ genTokens config = pure . filterBySet ('t' : config ^. set) . S.fromList
 
 -- | Generate a random pack based on the pack configuration
 genPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
-genPack config cards = do
+genPack config cards =
   if config ^. set == "stx"
     then genStrixhavenPack config cards
     else do
@@ -172,8 +170,7 @@ genStrixhavenPack config cards = do
 genByRarity :: Int -> [Rarity] -> HashSet CardObj -> IO (HashSet CardObj)
 genByRarity n rarityList cardSet = do
   rarity <- pickRarity rarityList
-  cardSet' <- gen n (filterByRarity rarity cardSet)
-  pure cardSet'
+  gen n (filterByRarity rarity cardSet)
 
 -- | Generate set of n cards from set
 gen :: Int -> HashSet CardObj -> IO (HashSet CardObj)
