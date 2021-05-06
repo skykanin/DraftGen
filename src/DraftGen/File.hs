@@ -16,25 +16,13 @@ import Control.Monad.Trans.Except
 import Data.Aeson (eitherDecode, encodeFile)
 import qualified Data.ByteString.Lazy as B
 import Encode (encodePacks)
-import Generate (genLands, genPacks, readCards)
+import Generate (genLands, genPacks, genTokens, readCards)
 import Network.Wreq (get, responseBody)
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
 import Types (BulkDataObj, downloadUri, fromArgs)
-import Util (fileName)
-
-appName :: FilePath
-appName = "DraftGen"
-
-cardCacheName :: FilePath
-cardCacheName = "CardData.json"
-
-landName :: FilePath
-landName = "lands"
-
-packName :: FilePath
-packName = "packs"
+import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
 
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
@@ -55,16 +43,17 @@ execute = (either print pure =<<) $
     cardCache <-
       ExceptT $ getFromCache (downloadCards args) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
-    landData <- ExceptT $ readCards cardCache
     let config = fromArgs args
         ln = fileName config landName
         pn = fileName config packName
+        tn = fileName config tokenName
     dataPath <- liftIO $ getXdgDirectory XdgData appName
     _ <- liftIO $ createDirectoryIfMissing True dataPath
     selectedCards <- liftIO $ genPacks config cards
-    _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config landData
+    _ <- liftIO $ encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
+    _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
     _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-    liftIO $ printf "Packs generated at: %s\nLands at: %s" (dataPath </> pn) (dataPath </> ln)
+    liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
 
 -- | If card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
 getFromCache :: Bool -> FilePath -> IO (Either String FilePath)

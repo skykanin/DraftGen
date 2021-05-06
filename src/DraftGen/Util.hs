@@ -7,12 +7,36 @@
 
  Module for utility functions
 -}
-module Util (fileName) where
+module Util (
+  appName,
+  cardCacheName,
+  fileName,
+  landName,
+  packName,
+  tokenName,
+) where
 
 import Control.Lens ((^.))
 import Text.Printf
 import Types (PackConfig, amount, set)
 
+appName :: FilePath
+appName = "DraftGen"
+
+cardCacheName :: FilePath
+cardCacheName = "CardData.json"
+
+landName :: FilePath
+landName = "lands"
+
+packName :: FilePath
+packName = "packs"
+
+tokenName :: FilePath
+tokenName = "tokens"
+
 -- | Produce filename with set and pack amount information
 fileName :: PackConfig -> String -> String
-fileName cfg = printf "%d%s%s.json" (cfg ^. amount) (cfg ^. set)
+fileName cfg name
+  | name == packName = printf "%d%s%s.json" (cfg ^. amount) (cfg ^. set) name
+  | otherwise = printf "%s%s.json" (cfg ^. set) name
