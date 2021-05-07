@@ -54,9 +54,6 @@ jobs:
           - os: macOS-latest
             args: --best
             strip: true
-          - os: windows-latest
-            args: -9
-            strip: false
 
     steps:
       - name: Check out code
@@ -98,12 +95,10 @@ jobs:
         run: |
           echo "BINARY_PATH=$(find dist-newstyle \( -name 'dg' -o -name 'dg.exe' \) -type f)" >> $GITHUB_ENV
 
-      # - name: Compress binaries using UPX
-      #   uses: svenstaro/upx-action@v2
-      #   with:
-      #     file: ${{ env.BINARY_PATH }}
-      #     args: ${{ matrix.args }}
-      #     strip: ${{ matrix.strip }}
+      - if: matrix.os == 'ubuntu-latest'
+        name: Strip linux binaries
+        run : |
+          upx ${{ matrix.args }} ${{ env.BINARY_PATH }} || true
 
       - name: Load Release URL File from release job
         uses: actions/download-artifact@v2
