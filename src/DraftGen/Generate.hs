@@ -28,6 +28,9 @@ import Data.Char (toLower)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
 import Data.List (find, intersect, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.Maybe (fromMaybe)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Sq
 import System.Random
 import Types
 
@@ -135,7 +138,7 @@ commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
       pure $ commonCards `S.union` foilCard
 
 -- | Plural of genPack
-genPacks :: PackConfig -> [CardObj] -> IO [HashSet CardObj]
+genPacks :: PackConfig -> [CardObj] -> IO [Seq CardObj]
 genPacks config cards = replicateM (config ^. amount) (genPack config cards)
 
 -- | Return basic lands belonging to the data set
@@ -147,7 +150,7 @@ genTokens :: PackConfig -> [CardObj] -> [HashSet CardObj]
 genTokens config = pure . filterBySet ('t' : config ^. set) . S.fromList
 
 -- | Generate a random pack based on the pack configuration
-genPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
+genPack :: PackConfig -> [CardObj] -> IO (Seq CardObj)
 genPack config cards =
   if config ^. set == "stx"
     then genStrixhavenPack config cards
@@ -162,10 +165,13 @@ genPack config cards =
       uncommonCards <- gen (config ^. uncommons) (fbr Uncommon)
       pick <- pickRareOrMythic (config ^. mythicChance)
       rareOrMythicCards <- gen (config ^. rareOrMythics) (fbr pick)
-      pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
+      pure $ fromSets [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
+
+fromSets :: [HashSet a] -> Seq a
+fromSets = foldr ((Sq.><) . Sq.fromList . S.toList) Sq.empty
 
 -- | Generate a strixhaven pack (has special rules)
-genStrixhavenPack :: PackConfig -> [CardObj] -> IO (HashSet CardObj)
+genStrixhavenPack :: PackConfig -> [CardObj] -> IO (Seq CardObj)
 genStrixhavenPack config cards = do
   let stxCards = english . filterBySet (config ^. set) . S.fromList . filterDesired $ cards
       baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
@@ -180,14 +186,14 @@ genStrixhavenPack config cards = do
   uncommonCards <- gen (config ^. uncommons) (fbr Uncommon)
   pick <- pickRareOrMythic (config ^. mythicChance)
   rareOrMythicCards <- gen (config ^. rareOrMythics) (fbr pick)
-  lesson <- genByRarity 1 [Common, Rare, Mythic] lessons
-  mysticalArchive <- genByRarity 1 [Uncommon .. Mythic] staCards
-  pure $ S.unions [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, lesson, mysticalArchive]
+  lesson <- genByType 1 Lesson lessons
+  mysticalArchive <- genByType 1 Archive staCards
+  pure $ fromSets [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, lesson, mysticalArchive]
 
--- | Generate set of cards filtered by rarity
-genByRarity :: Int -> [Rarity] -> HashSet CardObj -> IO (HashSet CardObj)
-genByRarity n rarityList cardSet = do
-  rarity <- pickRarity rarityList
+-- | Generate set of cards filtered by card type
+genByType :: Int -> StxCardType -> HashSet CardObj -> IO (HashSet CardObj)
+genByType n cardType cardSet = do
+  rarity <- pickStxRarity cardType
   gen n (filterByRarity rarity cardSet)
 
 -- | Generate set of n cards from set

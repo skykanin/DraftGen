@@ -13,8 +13,7 @@ module Encode (encodeCard, encodePacks) where
 
 import Control.Applicative ((<|>))
 import Control.Lens
-import Data.HashSet (HashSet)
-import qualified Data.HashSet as S
+import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as Seq
 import Types
@@ -28,9 +27,9 @@ encodeCard card =
       & nickname ?~ card ^. name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
-encodePack :: TransformObj -> HashSet CardObj -> GameObj
+encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
 encodePack transformObj cardSet =
-  go (mkEmptyPack transformObj) 100 $ S.toList cardSet
+  go (mkEmptyPack transformObj) 100 $ toList cardSet
   where
     go :: GameObj -> Int -> [CardObj] -> GameObj
     go packObj _ [] = packObj
@@ -44,10 +43,10 @@ encodePack transformObj cardSet =
             & containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
-encodePacks :: [HashSet CardObj] -> TTSObj
+encodePacks :: Foldable f => [f CardObj] -> TTSObj
 encodePacks = go defaultTTSObj 1 (0, 0)
   where
-    go :: TTSObj -> Int -> (Int, Int) -> [HashSet CardObj] -> TTSObj
+    go :: Foldable f => TTSObj -> Int -> (Int, Int) -> [f CardObj] -> TTSObj
     go ttsObj _ _ [] = ttsObj
     go ttsObj counter (x, z) (pack : packs) =
       go newTTSObj (checkCounter counter) (checkX x, checkZ z) packs
