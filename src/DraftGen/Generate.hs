@@ -96,10 +96,25 @@ pickRareOrMythic (Ratio numerator denominator) = do
   chance <- getStdRandom (randomR (1, denominator))
   pure $ if chance > numerator then Rare else Mythic
 
-pickRarity :: [Rarity] -> IO Rarity
-pickRarity rarityList = do
-  idx <- getStdRandom (randomR (0, length rarityList - 1))
-  pure $ rarityList !! idx
+-- Strixhaven rarity weights for lessons and mystical archive cards
+
+stxLessonRarities :: [(Rarity, [Int])]
+stxLessonRarities = [(Common, [1, 2, 3]), (Uncommon, [4, 5]), (Rare, [6, 7]), (Mythic, [8])]
+
+stxArchiveRarities :: [(Rarity, [Int])]
+stxArchiveRarities = [(Uncommon, [1, 2, 3, 4, 5]), (Rare, [6, 7]), (Mythic, [8])]
+
+data StxCardType = Lesson | Archive
+
+-- | Pick a rarity based on the hardcoded strixhaven rarity weights
+pickStxRarity :: StxCardType -> IO Rarity
+pickStxRarity cardType = do
+  let ratios = case cardType of
+        Lesson -> stxLessonRarities
+        Archive -> stxArchiveRarities
+  rarityIdx <- getStdRandom (randomR (1, 8))
+  let (rarity, _) = fromMaybe (error "No matching rarity found in range") $ find (\(_, range) -> rarityIdx `elem` range) ratios
+  pure rarity
 
 -- | List of all the MTG rarities
 rarities :: [Rarity]
