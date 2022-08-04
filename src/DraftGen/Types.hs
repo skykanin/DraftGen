@@ -1,8 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell #-}
-
 {- |
    Module      : Types
    License     : GNU GPL, version 3 or above
@@ -12,17 +7,46 @@
 
  Module defining the data types representing cards
 -}
-module Types where
+module Types (
+  PackConfig (..),
+  Rarity (..),
+  UriObj (..),
+  FrameEffect (..),
+  CardFace (..),
+  CardObj (..),
+  BulkDataObj (..),
+  CardImgObj (..),
+  ObjType (..),
+  TransformObj (..),
+  TTSCardObj (..),
+  GameObj (..),
+  TTSObj (..),
+  fromArgs,
+) where
 
 import CLI (Args (..), Ratio, Unwrapped)
 import Control.Lens hiding (Empty, Unwrapped, (.=))
-import Data.Aeson
+import Data.Aeson (
+  FromJSON (parseJSON),
+  KeyValue ((.=)),
+  Object,
+  Options (constructorTagModifier, fieldLabelModifier),
+  ToJSON (toJSON),
+  Value (Object, String),
+  defaultOptions,
+  genericParseJSON,
+  genericToJSON,
+  object,
+  withObject,
+  (.!=),
+  (.:),
+  (.:?),
+ )
+import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
-import qualified Data.HashMap.Strict as M
 import Data.Hashable (Hashable)
 import Data.Sequence (Seq (..))
-import Data.Text (pack)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 data PackConfig = PackConfig
   { packConfigAmount :: Int
@@ -199,7 +223,7 @@ toObject = Object . go 1 M.empty
     go :: Int -> Object -> Seq CardImgObj -> Object
     go _ m Empty = m
     go n m (x :<| xs) =
-      go (n + 1) (M.insert (pack $ show n) (toJSON x) m) xs
+      go (n + 1) (M.insert (read $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
   { backIsHidden :: Bool
