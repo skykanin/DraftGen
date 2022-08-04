@@ -1,45 +1,45 @@
 {
   description = "Package build and dev environment for DraftGen";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.haskellNix.url = "github:input-output-hk/haskell.nix/master";
-  outputs = { self, haskellNix, nixpkgs }: {
-    # setup derivation for x86_64-linux
-    defaultPackage.x86_64-linux =
-      let hn = haskellNix.legacyPackages.x86_64-linux.haskell-nix;
-          drv = hn.project {
-            src = hn.haskellLib.cleanGit {
-              name = "DraftGen";
-              src = ./.;
-            };
-            compiler-nix-name = "ghc8104";
-          };
-      in drv.DraftGen;
-   
-    # setup devShell for x86_64-linux.
-    devShell.x86_64-linux =
-      with import nixpkgs { system = "x86_64-linux"; };
-      let
-        inherit (lib) makeLibraryPath;
-        hs = haskell.packages.ghc8104;
-        tools = [
-          binutils-unwrapped
-          haskell-language-server
-          hs.ghc
-          hs.cabal-install
-          hs.ghcid
-          hs.fourmolu
-        ];
-        libraries = [
-          zlib
-        ];
-        libraryPath = "${makeLibraryPath libraries}";
-      in
-        mkShell {
-          buildInputs = tools ++ libraries;
-          shellHook = ''
-            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${libraryPath}"
-            export LIBRARY_PATH="${libraryPath}"
-          '';
-        };
+  inputs = {
+    # Unofficial library of utilities for managing Nix Flakes.
+    flake-utils.url = "github:numtide/flake-utils";
+
+    # Nix package set
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
+  outputs = { self, flake-utils, nixpkgs }:
+    flake-utils.lib.eachSystem
+    (with flake-utils.lib.system; [ x86_64-linux x86_64-darwin aarch64-darwin ])
+    (system:
+      let
+        compiler-version = "ghc923";
+        pkgs = nixpkgs.legacyPackages.${system};
+        inherit (pkgs) lib;
+        hpkgs = pkgs.haskell.packages.${compiler-version};
+      in {
+        devShells.default =
+          let
+            tools = [
+              pkgs.haskell-language-server
+              hpkgs.ghc
+              hpkgs.cabal-install
+              hpkgs.ghcid
+              hpkgs.fourmolu_0_7_0_1
+            ];
+            libraries = [
+              pkgs.zlib
+            ];
+            libraryPath = "${lib.makeLibraryPath libraries}";
+          in
+            hpkgs.shellFor {
+              name = "dev-shell";
+
+              packages = p: [];
+              withHoogle = true;
+              buildInputs = tools ++ libraries;
+
+              LD_LIBRARY_PATH = libraryPath;
+              LIBRARY_PATH = libraryPath;
+            };
+    });
 }
