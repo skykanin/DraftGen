@@ -21,7 +21,22 @@ module CLI (
 ) where
 
 import Data.Char (isNumber)
-import Options.Generic
+import Options.Generic (
+  Generic,
+  Modifiers (shortNameModifier),
+  ParseField,
+  ParseFields,
+  ParseRecord (..),
+  Unwrapped,
+  Wrapped,
+  firstLetter,
+  lispCaseModifiers,
+  parseRecordWithModifiers,
+  unwrapRecord,
+  type (:::),
+  type (<!>),
+  type (<?>),
+ )
 
 data Args w = Args
   { set :: w ::: String <!> "m21" <?> "The MTG set to generate cards from (default: m21)"

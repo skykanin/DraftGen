@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 {- |
    Module      : Encode
    License     : GNU GPL, version 3 or above
@@ -12,10 +10,10 @@
 module Encode (encodeCard, encodePacks) where
 
 import Control.Applicative ((<|>))
-import Control.Lens
 import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
-import qualified Data.Sequence as Seq
+import Data.Sequence qualified as Seq
+import Optics
 import Types
 
 -- | Encode a single card
@@ -23,8 +21,8 @@ encodeCard :: CardObj -> TTSObj
 encodeCard card =
   withTTS $
     mkEmptyCard cardTransform
-      & customDeck %~ (Seq.|> mkCardImgObj card)
-      & nickname ?~ card ^. name
+      & #customDeck %~ (Seq.|> mkCardImgObj card)
+      & #nickname ?~ card ^. #name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
 encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
@@ -38,9 +36,9 @@ encodePack transformObj cardSet =
       where
         updatedPackObj =
           packObj
-            & customDeck %~ (Seq.|> mkCardImgObj cardObj)
-            & deckIDs %~ (Seq.|> cardId)
-            & containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
+            & #customDeck %~ (Seq.|> mkCardImgObj cardObj)
+            & #deckIDs %~ (Seq.|> cardId)
+            & #containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
 encodePacks :: Foldable f => [f CardObj] -> TTSObj
@@ -53,11 +51,11 @@ encodePacks = go defaultTTSObj 1 (0, 0)
       where
         newTTSObj =
           ttsObj
-            & objectStates <>~ [encodePack packPosition pack]
+            & #objectStates <>~ [encodePack packPosition pack]
         packPosition =
           packTransform
-            & posX +~ x
-            & posZ +~ z
+            & #posX +~ x
+            & #posZ +~ z
         checkX xVal
           | counter `mod` cutOff == 0 && counter > 0 = 0
           | otherwise = xInc + xVal
@@ -86,10 +84,10 @@ packTransform = TransformObj 1 1 1 180 180 0 0 1 0
 mkTTSCardObj :: Int -> CardObj -> TTSCardObj
 mkTTSCardObj cardId cardObj =
   TTSCardObj
-    { ttsCardObjTransform = cardTransform
-    , ttsCardObjNickname = cardObj ^. name
-    , ttsCardObjName = Card
-    , ttsCardObjCardID = cardId
+    { transform = cardTransform
+    , nickname = cardObj ^. #name
+    , name = Card
+    , cardID = cardId
     }
 
 defaultBackUri :: String
@@ -103,53 +101,53 @@ mkCardImgObj cardObj =
     , numHeight = 1
     , backURL =
         fromMaybe defaultBackUri $
-          cardObj ^? cardFaces . _last . imageUris . _Just . png
+          cardObj ^? #cardFaces % _last % #imageUris %? #png
     , faceURL =
         -- First try to get image from card faces then try base image uri field, otherwise error
         fromMaybe (error "No faceURL found") $
-          cardObj ^? cardFaces . _head . imageUris . _Just . png
-            <|> cardObj ^? imageUris . _Just . png
+          cardObj ^? #cardFaces % _head % #imageUris %? #png
+            <|> cardObj ^? #imageUris %? #png
     }
 
 mkEmptyCard :: TransformObj -> GameObj
 mkEmptyCard transformObj =
   GameObj
-    { gameObjTransform = transformObj
-    , gameObjName = "Card"
-    , gameObjNickname = Nothing
-    , gameObjCustomDeck = Seq.empty
-    , gameObjCardID = Just 100
-    , gameObjDeckIDs = Seq.empty
-    , gameObjContainedObjects = Seq.empty
+    { transform = transformObj
+    , name = "Card"
+    , nickname = Nothing
+    , customDeck = Seq.empty
+    , cardID = Just 100
+    , deckIDs = Seq.empty
+    , containedObjects = Seq.empty
     }
 
 mkEmptyPack :: TransformObj -> GameObj
 mkEmptyPack transformObj =
   GameObj
-    { gameObjTransform = transformObj
-    , gameObjName = "DeckCustom"
-    , gameObjNickname = Nothing
-    , gameObjCustomDeck = Seq.empty
-    , gameObjCardID = Nothing
-    , gameObjDeckIDs = Seq.empty
-    , gameObjContainedObjects = Seq.empty
+    { transform = transformObj
+    , name = "DeckCustom"
+    , nickname = Nothing
+    , customDeck = Seq.empty
+    , cardID = Nothing
+    , deckIDs = Seq.empty
+    , containedObjects = Seq.empty
     }
 
 withTTS :: GameObj -> TTSObj
-withTTS gameobj = TTSObj {_objectStates = [gameobj]}
+withTTS gameobj = TTSObj {objectStates = [gameobj]}
 
 defaultTTSObj :: TTSObj
 defaultTTSObj =
   TTSObj
-    { _objectStates =
+    { objectStates =
         [ GameObj
-            { gameObjTransform = packTransform
-            , gameObjName = "DeckCustom"
-            , gameObjNickname = Nothing
-            , gameObjCustomDeck = Seq.empty
-            , gameObjCardID = Nothing
-            , gameObjDeckIDs = Seq.empty
-            , gameObjContainedObjects = Seq.empty
+            { transform = packTransform
+            , name = "DeckCustom"
+            , nickname = Nothing
+            , customDeck = Seq.empty
+            , cardID = Nothing
+            , deckIDs = Seq.empty
+            , containedObjects = Seq.empty
             }
         ]
     }

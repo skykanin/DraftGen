@@ -16,9 +16,10 @@ module Util (
   tokenName,
 ) where
 
-import Control.Lens ((^.))
-import Text.Printf
-import Types (PackConfig, amount, set)
+import Optics.Core ((^.))
+import Text.Printf (printf)
+import Types (PackConfig)
+import Types qualified
 
 appName :: FilePath
 appName = "DraftGen"
@@ -38,5 +39,5 @@ tokenName = "tokens"
 -- | Produce filename with set and pack amount information
 fileName :: PackConfig -> String -> String
 fileName cfg name
-  | name == packName = printf "%d%s%s.json" (cfg ^. amount) (cfg ^. set) name
-  | otherwise = printf "%s%s.json" (cfg ^. set) name
+  | name == packName = printf "%d%s%s.json" (cfg ^. #amount) (cfg ^. #set) name
+  | otherwise = printf "%s%s.json" (cfg ^. #set) name

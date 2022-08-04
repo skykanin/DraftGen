@@ -10,27 +10,29 @@
 module File (execute) where
 
 import CLI (Args (..), Unwrapped, unwrapRecord)
-import Control.Lens ((^.))
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Except
+import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
 import Data.Aeson (eitherDecode, encodeFile)
-import qualified Data.ByteString.Lazy as B
+import Data.ByteString.Lazy qualified as B
 import Encode (encodeCard, encodePacks)
 import Generate (findCard, genLands, genPacks, genTokens, readCards)
-import Network.Wreq (get, responseBody)
+import Network.Wreq (get)
+import Optics ((^.))
+import Optics.Wreq (responseBody)
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
-import Types (BulkDataObj, CardObj, downloadUri, fromArgs)
+import Types (BulkDataObj, CardObj, fromArgs)
+import Types qualified
 import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
 
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
 validateArgs as
-  | amount as < 1 = Left "Error: amount is less than one"
-  | commons as < 0 = Left "Error: commons is negative"
-  | uncommons as < 0 = Left "Error: uncommons is negative"
-  | rares as < 0 = Left "Error: rares is negative"
+  | as ^. #amount < 1 = Left "Error: amount is less than one"
+  | as ^. #commons < 0 = Left "Error: commons is negative"
+  | as ^. #uncommons < 0 = Left "Error: uncommons is negative"
+  | as ^. #rares < 0 = Left "Error: rares is negative"
   | otherwise = Right as
 
 execute :: IO ()
@@ -41,10 +43,10 @@ execute = (either print pure =<<) $
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
     cardCache <-
-      ExceptT $ getFromCache (downloadCards args) (cachePath </> cardCacheName)
+      ExceptT $ getFromCache (args ^. #downloadCards) (cachePath </> cardCacheName)
     cards <- ExceptT $ readCards cardCache
     -- If argument is passed to a card search otherwise generate packs
-    case getCard args of
+    case args ^. #getCard of
       Just query -> liftIO $ searchCard query cards
       Nothing -> do
         let config = fromArgs args
@@ -92,6 +94,6 @@ getLatestCards cardPath = do
   case eCards of
     Left err -> pure $ Left err
     Right cardData -> do
-      cardBinData <- get (cardData ^. downloadUri)
+      cardBinData <- get (cardData ^. #downloadUri)
       B.writeFile cardPath (cardBinData ^. responseBody)
       pure $ Right cardPath

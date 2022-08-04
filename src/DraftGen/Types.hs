@@ -25,7 +25,6 @@ module Types (
 ) where
 
 import CLI (Args (..), Ratio, Unwrapped)
-import Control.Lens hiding (Empty, Unwrapped, (.=))
 import Data.Aeson (
   FromJSON (parseJSON),
   KeyValue ((.=)),
@@ -47,33 +46,28 @@ import Data.Char (toLower)
 import Data.Hashable (Hashable)
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
+import Optics ((^.))
 
 data PackConfig = PackConfig
-  { packConfigAmount :: Int
-  , packConfigSet :: String
-  , packConfigCommons :: Int
-  , packConfigUncommons :: Int
-  , packConfigRareOrMythics :: Int
-  , packConfigMythicChance :: Ratio
-  , packConfigFoilChance :: Ratio
+  { amount :: Int
+  , set :: String
+  , commons :: Int
+  , uncommons :: Int
+  , rareOrMythics :: Int
+  , mythicChance :: Ratio
+  , foilChance :: Ratio
   }
-  deriving (Generic, Show)
-
-makeFields ''PackConfig
+  deriving stock (Generic, Show)
 
 fromArgs :: Args Unwrapped -> PackConfig
 fromArgs (Args s a c uc r mc fc _ _) = PackConfig a s c uc r mc fc
-
--- Transforms PascalCase to snake_case
-toSnakeCase :: String -> String
-toSnakeCase = camelTo2 '_'
 
 -- Lowercase string
 toLowerCase :: String -> String
 toLowerCase = map toLower
 
 data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
-  deriving (Enum, Eq, Generic, Show)
+  deriving stock (Enum, Eq, Generic, Show)
 
 instance Hashable Rarity
 
@@ -85,24 +79,15 @@ instance FromJSON Rarity where
         }
 
 data UriObj = UriObj
-  { uriObjSmall :: String
-  , uriObjNormal :: String
-  , uriObjLarge :: String
-  , uriObjPng :: String
+  { small :: String
+  , normal :: String
+  , large :: String
+  , png :: String
   }
-  deriving (Eq, Generic, Show)
-
-makeFields ''UriObj
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON)
 
 instance Hashable UriObj
-
-instance FromJSON UriObj where
-  parseJSON = withObject "UriObj" $ \v ->
-    UriObj
-      <$> v .: "small"
-      <*> v .: "normal"
-      <*> v .: "large"
-      <*> v .: "png"
 
 data FrameEffect
   = Legendary
@@ -125,7 +110,7 @@ data FrameEffect
   | Companion
   | Etched
   | Snow
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance Hashable FrameEffect
 
@@ -137,12 +122,10 @@ instance FromJSON FrameEffect where
         }
 
 data CardFace = CardFace
-  { cardFaceName :: String
-  , cardFaceImageUris :: Maybe UriObj
+  { name :: String
+  , imageUris :: Maybe UriObj
   }
-  deriving (Generic, Show)
-
-makeFields ''CardFace
+  deriving stock (Generic, Show)
 
 instance Hashable CardFace
 
@@ -151,33 +134,31 @@ instance FromJSON CardFace where
     CardFace <$> v .: "name" <*> v .:? "image_uris"
 
 data CardObj = CardObj
-  { cardObjId :: String
-  , cardObjName :: String
-  , cardObjLang :: String
-  , cardObjLayout :: String -- Make sum type for this
-  , cardObjHighresImage :: Bool
-  , cardObjImageUris :: Maybe UriObj
-  , cardObjCardFaces :: [CardFace]
-  , cardObjTypeLine :: String
-  , cardObjFrameEffects :: [FrameEffect]
-  , cardObjSet :: String
-  , cardObjCmc :: Double
-  , cardObjFoil :: Bool
-  , cardObjPromo :: Bool
-  , cardObjReprint :: Bool
-  , cardObjVariation :: Bool
-  , cardObjRarity :: Rarity
+  { id :: String
+  , name :: String
+  , lang :: String
+  , layout :: String -- Make sum type for this
+  , highresImage :: Bool
+  , imageUris :: Maybe UriObj
+  , cardFaces :: [CardFace]
+  , typeLine :: String
+  , frameEffects :: [FrameEffect]
+  , set :: String
+  , cmc :: Double
+  , foil :: Bool
+  , promo :: Bool
+  , reprint :: Bool
+  , variation :: Bool
+  , rarity :: Rarity
   }
-  deriving (Generic, Show)
-
-makeFields ''CardObj
+  deriving stock (Generic, Show)
 
 instance Hashable CardObj
 
 -- | Check card equality only by name
 instance Eq CardObj where
   cardObjA == cardObjB =
-    cardObjA ^. name == cardObjB ^. name
+    cardObjA ^. #name == cardObjB ^. #name
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
@@ -200,14 +181,12 @@ instance FromJSON CardObj where
       <*> v .: "rarity"
 
 data BulkDataObj = BulkDataObj
-  { bulkDataObjId :: String
-  , bulkDataObjBulkType :: String
-  , bulkDataObjName :: String
-  , bulkDataObjDownloadUri :: String
+  { id :: String
+  , bulkType :: String
+  , name :: String
+  , downloadUri :: String
   }
-  deriving (Generic, Show)
-
-makeFields ''BulkDataObj
+  deriving stock (Generic, Show)
 
 instance FromJSON BulkDataObj where
   parseJSON = withObject "BulkDataObj" $ \v ->
@@ -232,62 +211,56 @@ data CardImgObj = CardImgObj
   , backURL :: String
   , faceURL :: String
   }
-  deriving (Generic, Show)
+  deriving stock (Generic, Show)
 
 instance ToJSON CardImgObj
 
 data ObjType = Card
-  deriving (Generic, Show)
+  deriving stock (Generic, Show)
 
 instance ToJSON ObjType where
   toJSON Card = String "Card"
 
 data TransformObj = TransformObj
-  { _scaleZ :: Int
-  , _scaleY :: Int
-  , _scaleX :: Int
-  , _rotZ :: Int
-  , _rotY :: Int
-  , _rotX :: Int
-  , _posZ :: Int
-  , _posY :: Int
-  , _posX :: Int
+  { scaleZ :: Int
+  , scaleY :: Int
+  , scaleX :: Int
+  , rotZ :: Int
+  , rotY :: Int
+  , rotX :: Int
+  , posZ :: Int
+  , posY :: Int
+  , posX :: Int
   }
-  deriving (Generic, Show)
-
-makeFieldsNoPrefix ''TransformObj
-
-instance ToJSON TransformObj where
-  toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = tail}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
 
 data TTSCardObj = TTSCardObj
-  { ttsCardObjTransform :: TransformObj
-  , ttsCardObjNickname :: String
-  , ttsCardObjName :: ObjType
-  , ttsCardObjCardID :: Int
+  { transform :: TransformObj
+  , nickname :: String
+  , name :: ObjType
+  , cardID :: Int
   }
-  deriving (Generic, Show)
+  deriving stock (Generic, Show)
 
 instance ToJSON TTSCardObj where
   toJSON =
     genericToJSON $
-      defaultOptions {fieldLabelModifier = lower . drop 10}
+      defaultOptions {fieldLabelModifier = lower}
     where
       lower [] = []
       lower (x : xs) = toLower x : xs
 
 data GameObj = GameObj
-  { gameObjTransform :: TransformObj
-  , gameObjName :: String
-  , gameObjNickname :: Maybe String
-  , gameObjCustomDeck :: Seq CardImgObj
-  , gameObjCardID :: Maybe Int
-  , gameObjDeckIDs :: Seq Int
-  , gameObjContainedObjects :: Seq TTSCardObj
+  { transform :: TransformObj
+  , name :: String
+  , nickname :: Maybe String
+  , customDeck :: Seq CardImgObj
+  , cardID :: Maybe Int
+  , deckIDs :: Seq Int
+  , containedObjects :: Seq TTSCardObj
   }
-  deriving (Generic, Show)
-
-makeFields ''GameObj
+  deriving stock (Generic, Show)
 
 instance ToJSON GameObj where
   toJSON (GameObj t n nn cd cId dIds co) =
@@ -305,10 +278,6 @@ instance ToJSON GameObj where
       nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
-  {_objectStates :: [GameObj]}
-  deriving (Generic, Show)
-
-makeFieldsNoPrefix ''TTSObj
-
-instance ToJSON TTSObj where
-  toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = tail}
+  {objectStates :: [GameObj]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
