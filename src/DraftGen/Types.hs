@@ -156,6 +156,7 @@ data CardObj = CardObj
   , promo :: Bool
   , reprint :: Bool
   , variation :: Bool
+  , fullArt :: Bool
   , rarity :: Rarity
   }
   deriving stock (Generic, Show)
@@ -185,6 +186,7 @@ instance FromJSON CardObj where
       <*> v .: "promo"
       <*> v .: "reprint"
       <*> v .: "variation"
+      <*> v .: "full_art"
       <*> v .: "rarity"
 
 data BulkDataObj = BulkDataObj

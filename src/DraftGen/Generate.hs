@@ -66,14 +66,18 @@ findCard query = find matchName . filterDesired
     query' = map toLower query
     cardName = map toLower (c ^. #name)
 
--- | Filter out undesired cards
+-- | Filter out undesired card types
 filterDesired :: [CardObj] -> [CardObj]
-filterDesired = filter (\card -> all ($ card) [desiredLayout, nonVar, desiredFrameEff, notPromo])
- where
-  nonVar card = not $ card ^. #variation
-  desiredLayout card = card ^. #layout `notElem` unwantedLayout
-  desiredFrameEff card = null ((card ^. #frameEffects) `intersect` unwantedFrameEffects)
-  notPromo card = not $ card ^. #promo
+filterDesired = filter $ \card ->
+  all
+    ($ card)
+    [ \card -> card ^. #layout `notElem` unwantedLayout
+    , \card -> null $ (card ^. #frameEffects) `intersect` unwantedFrameEffects
+    , \card -> not $ card ^. #variation
+    , \card -> not $ card ^. #reprint
+    , \card -> not $ card ^. #fullArt
+    , \card -> not $ card ^. #promo
+    ]
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
