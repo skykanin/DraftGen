@@ -41,6 +41,7 @@ import Data.Aeson (
   (.:),
   (.:?),
  )
+import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
 import Data.Hashable (Hashable)
@@ -92,7 +93,6 @@ instance Hashable UriObj
 data FrameEffect
   = Legendary
   | Miracle
-  | Nyxborn
   | Nyxtouched
   | Draft
   | Devoid
@@ -110,6 +110,8 @@ data FrameEffect
   | Companion
   | Etched
   | Snow
+  | Lesson
+  | Textless
   deriving stock (Eq, Generic, Show)
 
 instance Hashable FrameEffect
@@ -125,9 +127,8 @@ data CardFace = CardFace
   { name :: String
   , imageUris :: Maybe UriObj
   }
-  deriving stock (Generic, Show)
-
-instance Hashable CardFace
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass Hashable
 
 instance FromJSON CardFace where
   parseJSON = withObject "CardFace" $ \v ->
@@ -170,10 +171,10 @@ instance FromJSON CardObj where
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
       <*> v .:? "card_faces" .!= []
-      <*> v .: "type_line"
+      <*> v .:? "type_line" .!= ""
       <*> v .:? "frame_effects" .!= []
       <*> v .: "set"
-      <*> v .: "cmc"
+      <*> v .:? "cmc" .!= 0
       <*> v .: "foil"
       <*> v .: "promo"
       <*> v .: "reprint"
@@ -202,7 +203,7 @@ toObject = Object . go 1 M.empty
     go :: Int -> Object -> Seq CardImgObj -> Object
     go _ m Empty = m
     go n m (x :<| xs) =
-      go (n + 1) (M.insert (read $ show n) (toJSON x) m) xs
+      go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
   { backIsHidden :: Bool
