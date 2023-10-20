@@ -10,30 +10,31 @@
 
  Command line arguments parsing module
 -}
-module CLI (
-  Args (..),
-  Unwrapped,
-  Ratio (..),
-  unwrapRecord,
-) where
+module CLI
+  ( Args (..)
+  , Unwrapped
+  , Ratio (..)
+  , unwrapRecord
+  )
+where
 
 import Data.Char (isNumber)
-import Options.Generic (
-  Generic,
-  Modifiers (shortNameModifier),
-  ParseField,
-  ParseFields,
-  ParseRecord (..),
-  Unwrapped,
-  Wrapped,
-  firstLetter,
-  lispCaseModifiers,
-  parseRecordWithModifiers,
-  unwrapRecord,
-  type (:::),
-  type (<!>),
-  type (<?>),
- )
+import Options.Generic
+  ( Generic
+  , Modifiers (shortNameModifier)
+  , ParseField
+  , ParseFields
+  , ParseRecord (..)
+  , Unwrapped
+  , Wrapped
+  , firstLetter
+  , lispCaseModifiers
+  , parseRecordWithModifiers
+  , unwrapRecord
+  , type (:::)
+  , type (<!>)
+  , type (<?>)
+  )
 
 data Args w = Args
   { set :: w ::: String <!> "m21" <?> "The MTG set to generate cards from"

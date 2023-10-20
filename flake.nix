@@ -5,26 +5,27 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     # Nix package set
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
   outputs = { self, flake-utils, nixpkgs }:
     flake-utils.lib.eachSystem
     (with flake-utils.lib.system; [ x86_64-linux x86_64-darwin aarch64-darwin ])
     (system:
       let
-        compiler-version = "ghc923";
+        compiler-version = "ghc946";
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
         hpkgs = pkgs.haskell.packages.${compiler-version};
       in {
         devShells.default =
           let
-            tools = [
+            tools = with hpkgs; [
               pkgs.haskell-language-server
-              hpkgs.ghc
-              hpkgs.cabal-install
-              hpkgs.ghcid
-              hpkgs.fourmolu_0_7_0_1
+              ghc
+              cabal-install
+              cabal-fmt
+              ghcid
+              fourmolu_0_10_1_0
             ];
             libraries = [
               pkgs.zlib

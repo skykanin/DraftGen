@@ -28,43 +28,43 @@ encodeCard card =
 encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
 encodePack transformObj cardSet =
   go (mkEmptyPack transformObj) 100 $ toList cardSet
-  where
-    go :: GameObj -> Int -> [CardObj] -> GameObj
-    go packObj _ [] = packObj
-    go packObj cardId (cardObj : obs) =
-      go updatedPackObj (cardId + 100) obs
-      where
-        updatedPackObj =
-          packObj
-            & #customDeck %~ (Seq.|> mkCardImgObj cardObj)
-            & #deckIDs %~ (Seq.|> cardId)
-            & #containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
+ where
+  go :: GameObj -> Int -> [CardObj] -> GameObj
+  go packObj _ [] = packObj
+  go packObj cardId (cardObj : obs) =
+    go updatedPackObj (cardId + 100) obs
+   where
+    updatedPackObj =
+      packObj
+        & #customDeck %~ (Seq.|> mkCardImgObj cardObj)
+        & #deckIDs %~ (Seq.|> cardId)
+        & #containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
 encodePacks :: Foldable f => [f CardObj] -> TTSObj
 encodePacks = go defaultTTSObj 1 (0, 0)
-  where
-    go :: Foldable f => TTSObj -> Int -> (Int, Int) -> [f CardObj] -> TTSObj
-    go ttsObj _ _ [] = ttsObj
-    go ttsObj counter (x, z) (pack : packs) =
-      go newTTSObj (checkCounter counter) (checkX x, checkZ z) packs
-      where
-        newTTSObj =
-          ttsObj
-            & #objectStates <>~ [encodePack packPosition pack]
-        packPosition =
-          packTransform
-            & #posX +~ x
-            & #posZ +~ z
-        checkX xVal
-          | counter `mod` cutOff == 0 && counter > 0 = 0
-          | otherwise = xInc + xVal
-        checkZ zVal
-          | counter `mod` cutOff == 0 && counter > 0 = zInc + zVal
-          | otherwise = zVal
-        checkCounter n
-          | n `mod` cutOff == 0 = 1
-          | otherwise = n + 1
+ where
+  go :: Foldable f => TTSObj -> Int -> (Int, Int) -> [f CardObj] -> TTSObj
+  go ttsObj _ _ [] = ttsObj
+  go ttsObj counter (x, z) (pack : packs) =
+    go newTTSObj (checkCounter counter) (checkX x, checkZ z) packs
+   where
+    newTTSObj =
+      ttsObj
+        & #objectStates <>~ [encodePack packPosition pack]
+    packPosition =
+      packTransform
+        & #posX +~ x
+        & #posZ +~ z
+    checkX xVal
+      | counter `mod` cutOff == 0 && counter > 0 = 0
+      | otherwise = xInc + xVal
+    checkZ zVal
+      | counter `mod` cutOff == 0 && counter > 0 = zInc + zVal
+      | otherwise = zVal
+    checkCounter n
+      | n `mod` cutOff == 0 = 1
+      | otherwise = n + 1
 
 cutOff :: Int
 cutOff = 6

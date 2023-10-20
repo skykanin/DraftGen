@@ -7,40 +7,42 @@
 
  Module defining the data types representing cards
 -}
-module Types (
-  PackConfig (..),
-  Rarity (..),
-  UriObj (..),
-  FrameEffect (..),
-  CardFace (..),
-  CardObj (..),
-  BulkDataObj (..),
-  CardImgObj (..),
-  ObjType (..),
-  TransformObj (..),
-  TTSCardObj (..),
-  GameObj (..),
-  TTSObj (..),
-  fromArgs,
-) where
+module Types
+  ( PackConfig (..)
+  , Rarity (..)
+  , UriObj (..)
+  , FrameEffect (..)
+  , CardFace (..)
+  , CardObj (..)
+  , BulkDataObj (..)
+  , CardImgObj (..)
+  , ObjType (..)
+  , TransformObj (..)
+  , TTSCardObj (..)
+  , GameObj (..)
+  , TTSObj (..)
+  , fromArgs
+  )
+where
 
 import CLI (Args (..), Ratio, Unwrapped)
-import Data.Aeson (
-  FromJSON (parseJSON),
-  KeyValue ((.=)),
-  Object,
-  Options (constructorTagModifier, fieldLabelModifier),
-  ToJSON (toJSON),
-  Value (Object, String),
-  defaultOptions,
-  genericParseJSON,
-  genericToJSON,
-  object,
-  withObject,
-  (.!=),
-  (.:),
-  (.:?),
- )
+import Data.Aeson
+  ( FromJSON (parseJSON)
+  , KeyValue ((.=))
+  , Object
+  , Options (constructorTagModifier, fieldLabelModifier)
+  , ToJSON (toJSON)
+  , Value (Object, String)
+  , defaultOptions
+  , genericParseJSON
+  , genericToJSON
+  , object
+  , withObject
+  , (.!=)
+  , (.:)
+  , (.:?)
+  )
+import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
 import Data.Hashable (Hashable)
@@ -92,7 +94,6 @@ instance Hashable UriObj
 data FrameEffect
   = Legendary
   | Miracle
-  | Nyxborn
   | Nyxtouched
   | Draft
   | Devoid
@@ -106,10 +107,17 @@ data FrameEffect
   | WaxingAndWaningMoonDfc
   | Showcase
   | ExtendedArt
-  | Fullart
   | Companion
   | Etched
   | Snow
+  | Lesson
+  | Shatteredglass
+  | ConvertDfc
+  | FanDfc
+  | UpsideDownDfc
+  | Borderless
+  | Textless
+  | Fullart
   deriving stock (Eq, Generic, Show)
 
 instance Hashable FrameEffect
@@ -125,9 +133,8 @@ data CardFace = CardFace
   { name :: String
   , imageUris :: Maybe UriObj
   }
-  deriving stock (Generic, Show)
-
-instance Hashable CardFace
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (Hashable)
 
 instance FromJSON CardFace where
   parseJSON = withObject "CardFace" $ \v ->
@@ -170,10 +177,10 @@ instance FromJSON CardObj where
       <*> v .: "highres_image"
       <*> v .:? "image_uris"
       <*> v .:? "card_faces" .!= []
-      <*> v .: "type_line"
+      <*> v .:? "type_line" .!= ""
       <*> v .:? "frame_effects" .!= []
       <*> v .: "set"
-      <*> v .: "cmc"
+      <*> v .:? "cmc" .!= 0
       <*> v .: "foil"
       <*> v .: "promo"
       <*> v .: "reprint"
@@ -198,11 +205,11 @@ instance FromJSON BulkDataObj where
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
-  where
-    go :: Int -> Object -> Seq CardImgObj -> Object
-    go _ m Empty = m
-    go n m (x :<| xs) =
-      go (n + 1) (M.insert (read $ show n) (toJSON x) m) xs
+ where
+  go :: Int -> Object -> Seq CardImgObj -> Object
+  go _ m Empty = m
+  go n m (x :<| xs) =
+    go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
   { backIsHidden :: Bool
@@ -247,9 +254,9 @@ instance ToJSON TTSCardObj where
   toJSON =
     genericToJSON $
       defaultOptions {fieldLabelModifier = lower}
-    where
-      lower [] = []
-      lower (x : xs) = toLower x : xs
+   where
+    lower [] = []
+    lower (x : xs) = toLower x : xs
 
 data GameObj = GameObj
   { transform :: TransformObj
@@ -273,9 +280,9 @@ instance ToJSON GameObj where
       ]
         ++ cardIdField
         ++ nicknameField
-    where
-      cardIdField = maybe [] (pure . ("CardID" .=)) cId
-      nicknameField = maybe [] (pure . ("Nickname" .=)) nn
+   where
+    cardIdField = maybe [] (pure . ("CardID" .=)) cId
+    nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
   {objectStates :: [GameObj]}

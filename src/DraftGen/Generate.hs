@@ -9,16 +9,17 @@
 
  Generate packs
 -}
-module Generate (
-  encodeFile,
-  filterBySet,
-  genLands,
-  genPacks,
-  genTokens,
-  readCards,
-  S.size,
-  findCard,
-) where
+module Generate
+  ( encodeFile
+  , filterBySet
+  , genLands
+  , genPacks
+  , genTokens
+  , readCards
+  , S.size
+  , findCard
+  )
+where
 
 import CLI (Ratio (..))
 import Control.Monad (replicateM)
@@ -32,12 +33,12 @@ import Data.Sequence (Seq)
 import Data.Sequence qualified as Sq
 import Optics.Core
 import System.Random (Random (randomR), getStdRandom)
-import Types (
-  CardObj (set),
-  FrameEffect (Draft, ExtendedArt, Showcase),
-  PackConfig,
-  Rarity (Common, Mythic, Rare, Uncommon),
- )
+import Types
+  ( CardObj (set)
+  , FrameEffect (Draft, ExtendedArt, Showcase)
+  , PackConfig
+  , Rarity (Common, Mythic, Rare, Uncommon)
+  )
 import Types qualified
 
 -- | Read cards from filepath into memory
@@ -59,20 +60,20 @@ unwantedFrameEffects = [Draft, ExtendedArt, Showcase]
 -- | Search for a card in the a set of cards
 findCard :: String -> [CardObj] -> Maybe CardObj
 findCard query = find matchName . filterDesired
-  where
-    matchName c = query' `isPrefixOf` cardName
-      where
-        query' = map toLower query
-        cardName = map toLower (c ^. #name)
+ where
+  matchName c = query' `isPrefixOf` cardName
+   where
+    query' = map toLower query
+    cardName = map toLower (c ^. #name)
 
 -- | Filter out undesired cards
 filterDesired :: [CardObj] -> [CardObj]
 filterDesired = filter (\card -> all ($ card) [desiredLayout, nonVar, desiredFrameEff, notPromo])
-  where
-    nonVar card = not $ card ^. #variation
-    desiredLayout card = card ^. #layout `notElem` unwantedLayout
-    desiredFrameEff card = null ((card ^. #frameEffects) `intersect` unwantedFrameEffects)
-    notPromo card = not $ card ^. #promo
+ where
+  nonVar card = not $ card ^. #variation
+  desiredLayout card = card ^. #layout `notElem` unwantedLayout
+  desiredFrameEff card = null ((card ^. #frameEffects) `intersect` unwantedFrameEffects)
+  notPromo card = not $ card ^. #promo
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
@@ -84,20 +85,20 @@ data Include = In | Out
 filterLesson :: Include -> HashSet CardObj -> HashSet CardObj
 filterLesson incl =
   S.filter (p incl . isLesson)
-  where
-    isLesson c = "Lesson" `isSuffixOf` (c ^. #typeLine)
-    p In = Prelude.id
-    p Out = not
+ where
+  isLesson c = "Lesson" `isSuffixOf` (c ^. #typeLine)
+  p In = Prelude.id
+  p Out = not
 
 -- | Filter on MTG basic lands
 filterBasicLands :: Include -> HashSet CardObj -> HashSet CardObj
 filterBasicLands incl =
   S.filter (\card -> p incl $ checkBasic card && checkLand card)
-  where
-    checkBasic c = "Basic" `isPrefixOf` (c ^. #typeLine)
-    checkLand c = "Land" `isInfixOf` (c ^. #typeLine)
-    p In = Prelude.id
-    p Out = not
+ where
+  checkBasic c = "Basic" `isPrefixOf` (c ^. #typeLine)
+  checkLand c = "Land" `isInfixOf` (c ^. #typeLine)
+  p In = Prelude.id
+  p Out = not
 
 -- | Pick a rarity to choose from based on the mythic drop chance in the pack configuration
 pickRareOrMythic :: Ratio -> IO Rarity
@@ -205,10 +206,10 @@ genByType n cardType cardSet = do
 -- | Generate set of n cards from set
 gen :: Int -> HashSet CardObj -> IO (HashSet CardObj)
 gen n cards = go n cards S.empty
-  where
-    go i pool acc
-      | i <= 0 || S.null pool = pure acc
-      | otherwise = do
-          rand <- getStdRandom (randomR (0, S.size pool - 1))
-          let card = S.toList pool !! rand
-          go (i - 1) (S.delete card pool) (S.insert card acc)
+ where
+  go i pool acc
+    | i <= 0 || S.null pool = pure acc
+    | otherwise = do
+        rand <- getStdRandom (randomR (0, S.size pool - 1))
+        let card = S.toList pool !! rand
+        go (i - 1) (S.delete card pool) (S.insert card acc)
