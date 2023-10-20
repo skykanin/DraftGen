@@ -7,10 +7,11 @@
 
  Module for utility optics operators
 -}
-module Optics.Operators (
-  (+~),
-  (<>~),
-) where
+module Optics.Operators
+  ( (+~)
+  , (<>~)
+  )
+where
 
 import Optics.Core (A_Setter, Is, Optic, (%~))
 

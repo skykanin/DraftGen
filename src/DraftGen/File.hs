@@ -76,14 +76,14 @@ searchCard query cards = do
 -- | If card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
 getFromCache :: Bool -> FilePath -> IO (Either String FilePath)
 getFromCache force cardPath = doesFileExist cardPath >>= choice force
-  where
-    choice toForce cardsExists
-      | toForce = updateCache
-      | cardsExists = pure $ Right cardPath
-      | otherwise = updateCache
-      where
-        msg = putStrLn "Updating cache..."
-        updateCache = msg *> getLatestCards cardPath
+ where
+  choice toForce cardsExists
+    | toForce = updateCache
+    | cardsExists = pure $ Right cardPath
+    | otherwise = updateCache
+   where
+    msg = putStrLn "Updating cache..."
+    updateCache = msg *> getLatestCards cardPath
 
 -- | Get the latest card set from scryfall and write it to a json file
 getLatestCards :: FilePath -> IO (Either String FilePath)

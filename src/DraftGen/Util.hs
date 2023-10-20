@@ -7,14 +7,15 @@
 
  Module for utility functions
 -}
-module Util (
-  appName,
-  cardCacheName,
-  fileName,
-  landName,
-  packName,
-  tokenName,
-) where
+module Util
+  ( appName
+  , cardCacheName
+  , fileName
+  , landName
+  , packName
+  , tokenName
+  )
+where
 
 import Optics.Core ((^.))
 import Text.Printf (printf)

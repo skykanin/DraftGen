@@ -7,40 +7,41 @@
 
  Module defining the data types representing cards
 -}
-module Types (
-  PackConfig (..),
-  Rarity (..),
-  UriObj (..),
-  FrameEffect (..),
-  CardFace (..),
-  CardObj (..),
-  BulkDataObj (..),
-  CardImgObj (..),
-  ObjType (..),
-  TransformObj (..),
-  TTSCardObj (..),
-  GameObj (..),
-  TTSObj (..),
-  fromArgs,
-) where
+module Types
+  ( PackConfig (..)
+  , Rarity (..)
+  , UriObj (..)
+  , FrameEffect (..)
+  , CardFace (..)
+  , CardObj (..)
+  , BulkDataObj (..)
+  , CardImgObj (..)
+  , ObjType (..)
+  , TransformObj (..)
+  , TTSCardObj (..)
+  , GameObj (..)
+  , TTSObj (..)
+  , fromArgs
+  )
+where
 
 import CLI (Args (..), Ratio, Unwrapped)
-import Data.Aeson (
-  FromJSON (parseJSON),
-  KeyValue ((.=)),
-  Object,
-  Options (constructorTagModifier, fieldLabelModifier),
-  ToJSON (toJSON),
-  Value (Object, String),
-  defaultOptions,
-  genericParseJSON,
-  genericToJSON,
-  object,
-  withObject,
-  (.!=),
-  (.:),
-  (.:?),
- )
+import Data.Aeson
+  ( FromJSON (parseJSON)
+  , KeyValue ((.=))
+  , Object
+  , Options (constructorTagModifier, fieldLabelModifier)
+  , ToJSON (toJSON)
+  , Value (Object, String)
+  , defaultOptions
+  , genericParseJSON
+  , genericToJSON
+  , object
+  , withObject
+  , (.!=)
+  , (.:)
+  , (.:?)
+  )
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
@@ -128,7 +129,7 @@ data CardFace = CardFace
   , imageUris :: Maybe UriObj
   }
   deriving stock (Eq, Generic, Show)
-  deriving anyclass Hashable
+  deriving anyclass (Hashable)
 
 instance FromJSON CardFace where
   parseJSON = withObject "CardFace" $ \v ->
@@ -199,11 +200,11 @@ instance FromJSON BulkDataObj where
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
-  where
-    go :: Int -> Object -> Seq CardImgObj -> Object
-    go _ m Empty = m
-    go n m (x :<| xs) =
-      go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
+ where
+  go :: Int -> Object -> Seq CardImgObj -> Object
+  go _ m Empty = m
+  go n m (x :<| xs) =
+    go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
   { backIsHidden :: Bool
@@ -248,9 +249,9 @@ instance ToJSON TTSCardObj where
   toJSON =
     genericToJSON $
       defaultOptions {fieldLabelModifier = lower}
-    where
-      lower [] = []
-      lower (x : xs) = toLower x : xs
+   where
+    lower [] = []
+    lower (x : xs) = toLower x : xs
 
 data GameObj = GameObj
   { transform :: TransformObj
@@ -274,9 +275,9 @@ instance ToJSON GameObj where
       ]
         ++ cardIdField
         ++ nicknameField
-    where
-      cardIdField = maybe [] (pure . ("CardID" .=)) cId
-      nicknameField = maybe [] (pure . ("Nickname" .=)) nn
+   where
+    cardIdField = maybe [] (pure . ("CardID" .=)) cId
+    nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
   {objectStates :: [GameObj]}
