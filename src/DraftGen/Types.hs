@@ -107,12 +107,17 @@ data FrameEffect
   | WaxingAndWaningMoonDfc
   | Showcase
   | ExtendedArt
-  | Fullart
   | Companion
   | Etched
   | Snow
   | Lesson
+  | Shatteredglass
+  | ConvertDfc
+  | FanDfc
+  | UpsideDownDfc
+  | Borderless
   | Textless
+  | Fullart
   deriving stock (Eq, Generic, Show)
 
 instance Hashable FrameEffect
