@@ -1,7 +1,7 @@
 cabal-version:      3.6
 category:           Tool
 name:               DraftGen
-version:            1.5.0.0
+version:            1.5.1.0
 synopsis:           Tool for generating booster packs in MTG
 description:
   Please see the README on GitHub at <https://github.com/skykanin/draftgen#readme>

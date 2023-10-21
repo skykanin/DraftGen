@@ -35,9 +35,9 @@ import Optics.Core
 import System.Random (Random (randomR), getStdRandom)
 import Types
   ( CardObj (set)
-  , FrameEffect (Draft, ExtendedArt, Showcase)
+  , FrameEffect (..)
   , PackConfig
-  , Rarity (Common, Mythic, Rare, Uncommon)
+  , Rarity (..)
   )
 import Types qualified
 
@@ -55,7 +55,7 @@ unwantedLayout = ["art_series", "planar", "scheme", "vanguard", "token", "double
 
 -- | No weird frame effects pls
 unwantedFrameEffects :: [FrameEffect]
-unwantedFrameEffects = [Draft, ExtendedArt, Showcase]
+unwantedFrameEffects = [Draft, ExtendedArt, Inverted, Showcase]
 
 -- | Search for a card in the a set of cards
 findCard :: String -> [CardObj] -> Maybe CardObj
@@ -124,8 +124,8 @@ data StxCardType = Lesson | Archive
 pickStxRarity :: StxCardType -> IO Rarity
 pickStxRarity cardType = do
   let ratios = case cardType of
-        Lesson -> stxLessonRarities
-        Archive -> stxArchiveRarities
+        Generate.Lesson -> stxLessonRarities
+        Generate.Archive -> stxArchiveRarities
   rarityIdx <- getStdRandom (randomR (1, 8))
   let (rarity, _) = fromMaybe (error "No matching rarity found in range") $ find (\(_, range) -> rarityIdx `elem` range) ratios
   pure rarity
@@ -197,7 +197,7 @@ genStrixhavenPack config cards = do
   uncommonCards <- gen (config ^. #uncommons) (fbr Uncommon)
   pick <- pickRareOrMythic (config ^. #mythicChance)
   rareOrMythicCards <- gen (config ^. #rareOrMythics) (fbr pick)
-  lesson <- genByType 1 Lesson lessons
+  lesson <- genByType 1 Generate.Lesson lessons
   mysticalArchive <- genByType 1 Archive staCards
   pure $ fromSets [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, lesson, mysticalArchive]
 
