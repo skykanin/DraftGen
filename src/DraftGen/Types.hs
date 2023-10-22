@@ -147,9 +147,9 @@ data CardObj = CardObj
   , layout :: String -- Make sum type for this
   , highresImage :: Bool
   , imageUris :: Maybe UriObj
-  , cardFaces :: [CardFace]
+  , cardFaces :: List CardFace
   , typeLine :: String
-  , frameEffects :: [FrameEffect]
+  , frameEffects :: List FrameEffect
   , borderColor :: BorderColor
   , set :: String
   , cmc :: Double
@@ -304,6 +304,6 @@ instance ToJSON GameObj where
     nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
-  {objectStates :: [GameObj]}
+  {objectStates :: List GameObj}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)

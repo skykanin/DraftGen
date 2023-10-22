@@ -61,7 +61,7 @@ execute = (either print pure =<<) $
         liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
 
 -- | Find card and write to file if it exists
-searchCard :: String -> [CardObj] -> IO ()
+searchCard :: String -> List CardObj -> IO ()
 searchCard query cards = do
   case findCard query cards of
     Nothing -> putStrLn "Card not found"

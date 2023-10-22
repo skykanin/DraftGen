@@ -18,6 +18,7 @@ module Prelude
   , module Data.Maybe
   , module Data.Monoid
   , module P
+  , List
   , (...)
   , expectJust
   , fromJust
@@ -38,6 +39,9 @@ import Data.Traversable
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 import "base" Prelude hiding (id)
 import "base" Prelude qualified as P
+
+-- | Prefix list name
+type List = []
 
 -- | Compose two functions. @f ... g@ is similar to @f . g@ except that g will be fed /two/ arguments instead of one before handing its result to @f@.
 (...) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
