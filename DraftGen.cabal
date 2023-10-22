@@ -81,3 +81,21 @@ library
     , unordered-containers
 
   hs-source-dirs:  src/DraftGen
+
+test-suite unit-tests
+  import:              common-stanza
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test/src
+  main-is:             Main.hs
+  other-modules:
+
+  build-depends:
+    , base                  ^>=4.17.2.0
+    , dg-prelude
+    , DraftGen
+    , exceptions
+    , filepath
+    , pretty-simple
+    , sandwich
+
+  ghc-options: -threaded

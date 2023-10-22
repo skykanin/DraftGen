@@ -16,6 +16,7 @@ module Generate
   , readCards
   , S.size
   , findCard
+  , filterDesired
   )
 where
 
