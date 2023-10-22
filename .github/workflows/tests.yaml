@@ -57,9 +57,9 @@ jobs:
           nix run .#check-formatting
 
       - name: Check Haskell formatting
-        run: |
-          set -x
-          nix develop -c fourmolu --mode check $(find -type f -name "*.hs" -not -path "*/dist-newstyle/*")
+        uses: haskell-actions/run-fourmolu@v9
+        with:
+          version: "0.10.1.0"
 
       - name: Update cabal packages
         run: nix develop -c cabal update
