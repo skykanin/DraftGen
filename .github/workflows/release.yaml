@@ -12,6 +12,10 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   create_release:
     name: Create Github Release
