@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 {- |
    Module      : Generate
    License     : GNU GPL, version 3 or above
@@ -34,7 +32,8 @@ import Data.Sequence qualified as Sq
 import Optics.Core
 import System.Random (Random (randomR), getStdRandom)
 import Types
-  ( CardObj (set)
+  ( BorderColor (..)
+  , CardObj (set)
   , FrameEffect (..)
   , PackConfig
   , Rarity (..)
@@ -72,16 +71,17 @@ filterDesired = filter $ \card ->
   all
     ($ card)
     [ \card -> card ^. #layout `notElem` unwantedLayout
-    , \card -> null $ (card ^. #frameEffects) `intersect` unwantedFrameEffects
-    , \card -> not $ card ^. #variation
-    , \card -> not $ card ^. #reprint
-    , \card -> not $ card ^. #fullArt
-    , \card -> not $ card ^. #promo
+    , \card -> null $ card.frameEffects `intersect` unwantedFrameEffects
+    , \card -> not card.variation
+    , \card -> not card.reprint
+    , \card -> not card.fullArt
+    , \card -> not card.promo
+    , \card -> card.borderColor /= ColorBorderless
     ]
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
-filterByRarity rarPred = S.filter (\card -> card ^. #rarity == rarPred)
+filterByRarity rarPred = S.filter (\card -> card.rarity == rarPred)
 
 data Include = In | Out
 
@@ -127,8 +127,11 @@ pickStxRarity cardType = do
         Generate.Lesson -> stxLessonRarities
         Generate.Archive -> stxArchiveRarities
   rarityIdx <- getStdRandom (randomR (1, 8))
-  let (rarity, _) = fromMaybe (error "No matching rarity found in range") $ find (\(_, range) -> rarityIdx `elem` range) ratios
-  pure rarity
+  pure
+    . fst
+    . fromMaybe (error "No matching rarity found in range")
+    . find (\(_, range) -> rarityIdx `elem` range)
+    $ ratios
 
 -- | List of all the MTG rarities
 rarities :: [Rarity]

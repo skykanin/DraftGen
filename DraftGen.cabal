@@ -26,6 +26,7 @@ common shared-properties
     DuplicateRecordFields
     OverloadedLabels
     OverloadedStrings
+    OverloadedRecordDot
 
 executable dg
   import:         shared-properties

@@ -21,6 +21,7 @@ module Types
   , TTSCardObj (..)
   , GameObj (..)
   , TTSObj (..)
+  , BorderColor (..)
   , fromArgs
   )
 where
@@ -150,6 +151,7 @@ data CardObj = CardObj
   , cardFaces :: [CardFace]
   , typeLine :: String
   , frameEffects :: [FrameEffect]
+  , borderColor :: BorderColor
   , set :: String
   , cmc :: Double
   , foil :: Bool
@@ -160,8 +162,7 @@ data CardObj = CardObj
   , rarity :: Rarity
   }
   deriving stock (Generic, Show)
-
-instance Hashable CardObj
+  deriving anyclass (Hashable)
 
 -- | Check card equality only by name
 instance Eq CardObj where
@@ -180,6 +181,7 @@ instance FromJSON CardObj where
       <*> v .:? "card_faces" .!= []
       <*> v .:? "type_line" .!= ""
       <*> v .:? "frame_effects" .!= []
+      <*> v .: "border_color"
       <*> v .: "set"
       <*> v .:? "cmc" .!= 0
       <*> v .: "foil"
@@ -188,6 +190,22 @@ instance FromJSON CardObj where
       <*> v .: "variation"
       <*> v .: "full_art"
       <*> v .: "rarity"
+
+data BorderColor
+  = ColorBlack
+  | ColorWhite
+  | ColorSilver
+  | ColorGold
+  | ColorBorderless
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (Hashable)
+
+instance FromJSON BorderColor where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase . drop 5
+        }
 
 data BulkDataObj = BulkDataObj
   { id :: String
