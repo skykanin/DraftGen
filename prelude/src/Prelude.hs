@@ -18,7 +18,9 @@ module Prelude
   , module Data.Maybe
   , module Data.Monoid
   , module P
+  , module Optics.Core
   , List
+  , HasCallStack
   , (...)
   , expectJust
   , fromJust
@@ -32,11 +34,12 @@ import Control.Monad
 import Data.Either
 import Data.Foldable
 import Data.Functor
-import Data.List
+import Data.List hiding (uncons)
 import Data.Maybe hiding (fromJust)
 import Data.Monoid
 import Data.Traversable
 import GHC.Stack (HasCallStack, withFrozenCallStack)
+import Optics.Core
 import "base" Prelude hiding (id)
 import "base" Prelude qualified as P
 

@@ -47,7 +47,8 @@ import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
 import Data.Hashable (Hashable)
-import Data.Sequence (Seq (..))
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import GHC.Generics (Generic)
 
 data PackConfig = PackConfig
@@ -226,8 +227,8 @@ toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
  where
   go :: Int -> Object -> Seq CardImgObj -> Object
-  go _ m Empty = m
-  go n m (x :<| xs) =
+  go _ m Seq.Empty = m
+  go n m (x Seq.:<| xs) =
     go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj

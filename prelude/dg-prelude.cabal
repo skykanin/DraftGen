@@ -35,6 +35,8 @@ common common-ghc-options
 
 library
   import:          common-language, common-ghc-options
-  build-depends:   base
+  build-depends:
+    , base                     ^>=4.17.2.0
+    , optics-core
   hs-source-dirs:  src
   exposed-modules: Prelude
