@@ -20,16 +20,12 @@ module Generate
 where
 
 import CLI (Ratio (..))
-import Control.Monad (replicateM)
 import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.Char (toLower)
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as S
-import Data.List (find, intersect, isInfixOf, isPrefixOf, isSuffixOf)
-import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Sq
-import Optics.Core
 import System.Random (Random (randomR), getStdRandom)
 import Types
   ( BorderColor (..)
@@ -91,7 +87,7 @@ filterLesson incl =
   S.filter (p incl . isLesson)
  where
   isLesson card = "Lesson" `isSuffixOf` card.typeLine
-  p In = Prelude.id
+  p In = identity
   p Out = not
 
 -- | Filter on MTG basic lands
@@ -101,7 +97,7 @@ filterBasicLands incl =
  where
   checkBasic card = "Basic" `isPrefixOf` card.typeLine
   checkLand card = "Land" `isInfixOf` card.typeLine
-  p In = Prelude.id
+  p In = identity
   p Out = not
 
 -- | Pick a rarity to choose from based on the mythic drop chance in the pack configuration
@@ -153,7 +149,7 @@ commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
 
 -- | Plural of genPack
 genPacks :: PackConfig -> [CardObj] -> IO [Seq CardObj]
-genPacks config cards = replicateM config.amount (genPack config cards)
+genPacks config = replicateM config.amount . genPack config
 
 -- | Return basic lands belonging to the data set
 genLands :: PackConfig -> [CardObj] -> [HashSet CardObj]

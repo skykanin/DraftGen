@@ -9,9 +9,6 @@
 -}
 module Encode (encodeCard, encodePacks) where
 
-import Control.Applicative ((<|>))
-import Data.Foldable (toList)
-import Data.Maybe (fromMaybe)
 import Data.Sequence qualified as Seq
 import Optics
 import Types

@@ -17,29 +17,42 @@ build-type:         Simple
 tested-with:        GHC ==9.4.6
 extra-source-files: README.md
 
-common shared-properties
+common common-language
   default-language:   GHC2021
   default-extensions:
     NoFieldSelectors
     DeriveAnyClass
     DerivingStrategies
     DuplicateRecordFields
+    LambdaCase
     OverloadedLabels
     OverloadedStrings
     OverloadedRecordDot
 
+common common-ghc-options
+  ghc-options:
+    -Wall -Wmissing-deriving-strategies -Wmissing-export-lists
+    -Wpartial-fields -Wredundant-constraints -Wunused-packages
+    -Wunused-type-patterns -Wno-name-shadowing
+
+common common-stanza
+  import: common-language
+  mixins:
+      base hiding (Prelude)
+    , dg-prelude (Prelude)
+
 executable dg
-  import:         shared-properties
+  import:         common-language
   main-is:        Main.hs
   hs-source-dirs: src
   build-depends:
-    , base      ^>=4.17.2.0
+    , base
     , DraftGen
 
   ghc-options:    -threaded -Wall -O2
 
 library
-  import:          shared-properties
+  import:          common-stanza, common-ghc-options
   exposed-modules:
     CLI
     Encode
@@ -56,6 +69,7 @@ library
     , bytestring
     , containers
     , directory
+    , dg-prelude
     , filepath
     , hashable
     , http-client
@@ -67,7 +81,3 @@ library
     , unordered-containers
 
   hs-source-dirs:  src/DraftGen
-  ghc-options:
-    -Wall -Wmissing-deriving-strategies -Wmissing-export-lists
-    -Wpartial-fields -Wredundant-constraints -Wunused-packages
-    -Wunused-type-patterns -Wno-name-shadowing
