@@ -18,7 +18,6 @@ import Encode (encodeCard, encodePacks)
 import Generate (findCard, genLands, genPacks, genTokens, readCards)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
-import Optics
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
@@ -29,10 +28,10 @@ import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
 validateArgs as
-  | as ^. #amount < 1 = Left "Error: amount is less than one"
-  | as ^. #commons < 0 = Left "Error: commons is negative"
-  | as ^. #uncommons < 0 = Left "Error: uncommons is negative"
-  | as ^. #rares < 0 = Left "Error: rares is negative"
+  | as.amount < 1 = Left "Error: amount is less than one"
+  | as.commons < 0 = Left "Error: commons is negative"
+  | as.uncommons < 0 = Left "Error: uncommons is negative"
+  | as.rares < 0 = Left "Error: rares is negative"
   | otherwise = Right as
 
 execute :: IO ()
@@ -43,10 +42,10 @@ execute = (either print pure =<<) $
     cachePath <- liftIO $ getXdgDirectory XdgCache appName
     _ <- liftIO $ createDirectoryIfMissing True cachePath
     cardCache <-
-      ExceptT $ getFromCache (args ^. #downloadCards) (cachePath </> cardCacheName)
+      ExceptT . getFromCache args.downloadCards $ cachePath </> cardCacheName
     cards <- ExceptT $ readCards cardCache
     -- If argument is passed to a card search otherwise generate packs
-    case args ^. #getCard of
+    case args.getCard of
       Just query -> liftIO $ searchCard query cards
       Nothing -> do
         let config = fromArgs args
@@ -69,7 +68,7 @@ searchCard query cards = do
     Just card -> do
       dataPath <- liftIO $ getXdgDirectory XdgData appName
       let cardObj = encodeCard card
-          filePath = dataPath </> query ++ ".json"
+          filePath = dataPath </> query <> ".json"
       encodeFile filePath cardObj
       printf "Card generated at: %s" filePath
 

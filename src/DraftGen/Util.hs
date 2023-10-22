@@ -17,7 +17,6 @@ module Util
   )
 where
 
-import Optics.Core ((^.))
 import Text.Printf (printf)
 import Types (PackConfig)
 import Types qualified
@@ -40,5 +39,5 @@ tokenName = "tokens"
 -- | Produce filename with set and pack amount information
 fileName :: PackConfig -> String -> String
 fileName cfg name
-  | name == packName = printf "%d%s%s.json" (cfg ^. #amount) (cfg ^. #set) name
-  | otherwise = printf "%s%s.json" (cfg ^. #set) name
+  | name == packName = printf "%d%s%s.json" cfg.amount cfg.set name
+  | otherwise = printf "%s%s.json" cfg.set name

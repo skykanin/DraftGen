@@ -22,7 +22,7 @@ encodeCard card =
   withTTS $
     mkEmptyCard cardTransform
       & #customDeck %~ (Seq.|> mkCardImgObj card)
-      & #nickname ?~ card ^. #name
+      & #nickname ?~ card.name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
 encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
@@ -85,7 +85,7 @@ mkTTSCardObj :: Int -> CardObj -> TTSCardObj
 mkTTSCardObj cardId cardObj =
   TTSCardObj
     { transform = cardTransform
-    , nickname = cardObj ^. #name
+    , nickname = cardObj.name
     , name = Card
     , cardID = cardId
     }

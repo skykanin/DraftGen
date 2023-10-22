@@ -49,7 +49,6 @@ import Data.Char (toLower)
 import Data.Hashable (Hashable)
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
-import Optics ((^.))
 
 data PackConfig = PackConfig
   { amount :: Int
@@ -167,7 +166,7 @@ data CardObj = CardObj
 -- | Check card equality only by name
 instance Eq CardObj where
   cardObjA == cardObjB =
-    cardObjA ^. #name == cardObjB ^. #name
+    cardObjA.name == cardObjB.name
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
