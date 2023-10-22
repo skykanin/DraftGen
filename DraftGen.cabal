@@ -26,8 +26,8 @@ common common-language
     DuplicateRecordFields
     LambdaCase
     OverloadedLabels
-    OverloadedStrings
     OverloadedRecordDot
+    OverloadedStrings
 
 common common-ghc-options
   ghc-options:
@@ -38,8 +38,8 @@ common common-ghc-options
 common common-stanza
   import: common-language
   mixins:
-      base hiding (Prelude)
-    , dg-prelude (Prelude)
+    base hiding (Prelude),
+    dg-prelude (Prelude)
 
 executable dg
   import:         common-language
@@ -68,8 +68,8 @@ library
     , base                  ^>=4.17.2.0
     , bytestring
     , containers
-    , directory
     , dg-prelude
+    , directory
     , filepath
     , hashable
     , http-client
@@ -83,14 +83,13 @@ library
   hs-source-dirs:  src/DraftGen
 
 test-suite unit-tests
-  import:              common-stanza
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test/src
-  main-is:             Main.hs
+  import:         common-stanza
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test/src
+  main-is:        Main.hs
   other-modules:
-
   build-depends:
-    , base                  ^>=4.17.2.0
+    , base           ^>=4.17.2.0
     , dg-prelude
     , DraftGen
     , exceptions
@@ -98,4 +97,4 @@ test-suite unit-tests
     , pretty-simple
     , sandwich
 
-  ghc-options: -threaded
+  ghc-options:    -threaded
