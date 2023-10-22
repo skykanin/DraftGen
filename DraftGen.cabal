@@ -46,7 +46,6 @@ library
     Generate
     Optics
     Optics.Operators
-    Optics.Wreq
     Types
     Util
 
@@ -58,12 +57,13 @@ library
     , directory
     , filepath
     , hashable
+    , http-client
+    , http-client-tls
     , optics-core
     , optparse-generic
     , random
     , transformers
     , unordered-containers
-    , wreq
 
   hs-source-dirs:  src/DraftGen
   ghc-options:

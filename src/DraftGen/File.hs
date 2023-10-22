@@ -16,9 +16,9 @@ import Data.Aeson (eitherDecode, encodeFile)
 import Data.ByteString.Lazy qualified as B
 import Encode (encodeCard, encodePacks)
 import Generate (findCard, genLands, genPacks, genTokens, readCards)
-import Network.Wreq (get)
-import Optics ((^.))
-import Optics.Wreq (responseBody)
+import Network.HTTP.Client
+import Network.HTTP.Client.TLS
+import Optics
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FilePath ((</>))
 import Text.Printf (printf)
@@ -88,12 +88,17 @@ getFromCache force cardPath = doesFileExist cardPath >>= choice force
 -- | Get the latest card set from scryfall and write it to a json file
 getLatestCards :: FilePath -> IO (Either String FilePath)
 getLatestCards cardPath = do
-  c <- get "https://api.scryfall.com/bulk-data/default-cards"
+  manager <- newManager tlsManagerSettings
+  response <- get manager "https://api.scryfall.com/bulk-data/default-cards"
   let eCards :: Either String BulkDataObj
-      eCards = eitherDecode $ c ^. responseBody
+      eCards = eitherDecode $ response.responseBody
   case eCards of
     Left err -> pure $ Left err
     Right cardData -> do
-      cardBinData <- get (cardData ^. #downloadUri)
-      B.writeFile cardPath (cardBinData ^. responseBody)
+      cardBinData <- get manager cardData.downloadUri
+      B.writeFile cardPath cardBinData.responseBody
       pure $ Right cardPath
+ where
+  get manager url = do
+    request <- parseRequest $ "GET " <> url
+    httpLbs request manager
