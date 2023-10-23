@@ -73,23 +73,11 @@ jobs:
           tagRegex: "v(.*)"
           tagRegexGroup: 1
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v4
-
-      - name: Check Cachix token exists
-        env:
-          CACHIX_AUTH_TOKEN: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-        run: |
-          if [[ -z "$CACHIX_AUTH_TOKEN" ]]; then
-              echo "Must provide CACHIX_AUTH_TOKEN in environment" 1>&2
-              exit 1
-          fi
-
-      - name: Setup cachix cache
-        uses: cachix/cachix-action@v12
+      - name: Setup Haskell
+      - uses: actions/setup-haskell@v1.1
         with:
-          name: draftgen
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          ghc-version: "9.4.6"
+          cabal-version: "3.10.1.0"
 
       - name: Cache ~/.cabal/store
         uses: actions/cache@v3.3.2
