@@ -21,6 +21,7 @@ module Types
   , TTSCardObj (..)
   , GameObj (..)
   , TTSObj (..)
+  , BorderColor (..)
   , fromArgs
   )
 where
@@ -46,9 +47,9 @@ import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
 import Data.Char (toLower)
 import Data.Hashable (Hashable)
-import Data.Sequence (Seq (..))
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import GHC.Generics (Generic)
-import Optics ((^.))
 
 data PackConfig = PackConfig
   { amount :: Int
@@ -147,25 +148,26 @@ data CardObj = CardObj
   , layout :: String -- Make sum type for this
   , highresImage :: Bool
   , imageUris :: Maybe UriObj
-  , cardFaces :: [CardFace]
+  , cardFaces :: List CardFace
   , typeLine :: String
-  , frameEffects :: [FrameEffect]
+  , frameEffects :: List FrameEffect
+  , borderColor :: BorderColor
   , set :: String
   , cmc :: Double
   , foil :: Bool
   , promo :: Bool
   , reprint :: Bool
   , variation :: Bool
+  , fullArt :: Bool
   , rarity :: Rarity
   }
   deriving stock (Generic, Show)
-
-instance Hashable CardObj
+  deriving anyclass (Hashable)
 
 -- | Check card equality only by name
 instance Eq CardObj where
   cardObjA == cardObjB =
-    cardObjA ^. #name == cardObjB ^. #name
+    cardObjA.name == cardObjB.name
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
@@ -179,13 +181,31 @@ instance FromJSON CardObj where
       <*> v .:? "card_faces" .!= []
       <*> v .:? "type_line" .!= ""
       <*> v .:? "frame_effects" .!= []
+      <*> v .: "border_color"
       <*> v .: "set"
       <*> v .:? "cmc" .!= 0
       <*> v .: "foil"
       <*> v .: "promo"
       <*> v .: "reprint"
       <*> v .: "variation"
+      <*> v .: "full_art"
       <*> v .: "rarity"
+
+data BorderColor
+  = ColorBlack
+  | ColorWhite
+  | ColorSilver
+  | ColorGold
+  | ColorBorderless
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (Hashable)
+
+instance FromJSON BorderColor where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase . drop 5
+        }
 
 data BulkDataObj = BulkDataObj
   { id :: String
@@ -207,8 +227,8 @@ toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
  where
   go :: Int -> Object -> Seq CardImgObj -> Object
-  go _ m Empty = m
-  go n m (x :<| xs) =
+  go _ m Seq.Empty = m
+  go n m (x Seq.:<| xs) =
     go (n + 1) (M.insert (fromString $ show n) (toJSON x) m) xs
 
 data CardImgObj = CardImgObj
@@ -285,6 +305,6 @@ instance ToJSON GameObj where
     nicknameField = maybe [] (pure . ("Nickname" .=)) nn
 
 newtype TTSObj = TTSObj
-  {objectStates :: [GameObj]}
+  {objectStates :: List GameObj}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)

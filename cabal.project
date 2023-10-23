@@ -1,0 +1,5 @@
+packages: .
+          ./prelude
+
+package *
+    ghc-options: -j4 +RTS -A32m -RTS

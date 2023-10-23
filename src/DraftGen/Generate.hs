@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 {- |
    Module      : Generate
    License     : GNU GPL, version 3 or above
@@ -18,66 +16,69 @@ module Generate
   , readCards
   , S.size
   , findCard
+  , filterDesired
   )
 where
 
 import CLI (Ratio (..))
-import Control.Monad (replicateM)
 import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.Char (toLower)
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as S
-import Data.List (find, intersect, isInfixOf, isPrefixOf, isSuffixOf)
-import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Sq
-import Optics.Core
 import System.Random (Random (randomR), getStdRandom)
 import Types
-  ( CardObj (set)
-  , FrameEffect (Draft, ExtendedArt, Showcase)
+  ( BorderColor (..)
+  , CardObj (set)
+  , FrameEffect (..)
   , PackConfig
-  , Rarity (Common, Mythic, Rare, Uncommon)
+  , Rarity (..)
   )
 import Types qualified
 
 -- | Read cards from filepath into memory
-readCards :: FilePath -> IO (Either String [CardObj])
+readCards :: FilePath -> IO (Either String (List CardObj))
 readCards = eitherDecodeFileStrict
 
 -- | Filter cards by MTG set predicate
 filterBySet :: String -> HashSet CardObj -> HashSet CardObj
-filterBySet mtgSet = S.filter (\card -> card ^. #set == mtgSet)
+filterBySet mtgSet = S.filter (\card -> card.set == mtgSet)
 
 -- | Undesired card layouts
-unwantedLayout :: [String]
+unwantedLayout :: List String
 unwantedLayout = ["art_series", "planar", "scheme", "vanguard", "token", "double_faced_token", "emblem"]
 
 -- | No weird frame effects pls
-unwantedFrameEffects :: [FrameEffect]
-unwantedFrameEffects = [Draft, ExtendedArt, Showcase]
+unwantedFrameEffects :: List FrameEffect
+unwantedFrameEffects = [Draft, ExtendedArt, Inverted, Showcase]
 
 -- | Search for a card in the a set of cards
-findCard :: String -> [CardObj] -> Maybe CardObj
+findCard :: String -> List CardObj -> Maybe CardObj
 findCard query = find matchName . filterDesired
  where
   matchName c = query' `isPrefixOf` cardName
    where
     query' = map toLower query
-    cardName = map toLower (c ^. #name)
+    cardName = map toLower c.name
 
--- | Filter out undesired cards
-filterDesired :: [CardObj] -> [CardObj]
-filterDesired = filter (\card -> all ($ card) [desiredLayout, nonVar, desiredFrameEff, notPromo])
- where
-  nonVar card = not $ card ^. #variation
-  desiredLayout card = card ^. #layout `notElem` unwantedLayout
-  desiredFrameEff card = null ((card ^. #frameEffects) `intersect` unwantedFrameEffects)
-  notPromo card = not $ card ^. #promo
+-- | Filter out undesired card types
+filterDesired :: List CardObj -> List CardObj
+filterDesired = filter $ \card ->
+  all
+    ($ card)
+    [ \card -> card.layout `notElem` unwantedLayout
+    , \card -> null $ card.frameEffects `intersect` unwantedFrameEffects
+    , \card -> not card.variation
+    , \card -> not card.reprint
+    , \card -> not card.fullArt
+    , \card -> not card.promo
+    , \card -> card.borderColor /= ColorBorderless
+    ]
 
 -- | Filter cards by MTG rarity
 filterByRarity :: Rarity -> HashSet CardObj -> HashSet CardObj
-filterByRarity rarPred = S.filter (\card -> card ^. #rarity == rarPred)
+filterByRarity rarPred = S.filter (\card -> card.rarity == rarPred)
 
 data Include = In | Out
 
@@ -86,8 +87,8 @@ filterLesson :: Include -> HashSet CardObj -> HashSet CardObj
 filterLesson incl =
   S.filter (p incl . isLesson)
  where
-  isLesson c = "Lesson" `isSuffixOf` (c ^. #typeLine)
-  p In = Prelude.id
+  isLesson card = "Lesson" `isSuffixOf` card.typeLine
+  p In = identity
   p Out = not
 
 -- | Filter on MTG basic lands
@@ -95,9 +96,9 @@ filterBasicLands :: Include -> HashSet CardObj -> HashSet CardObj
 filterBasicLands incl =
   S.filter (\card -> p incl $ checkBasic card && checkLand card)
  where
-  checkBasic c = "Basic" `isPrefixOf` (c ^. #typeLine)
-  checkLand c = "Land" `isInfixOf` (c ^. #typeLine)
-  p In = Prelude.id
+  checkBasic card = "Basic" `isPrefixOf` card.typeLine
+  checkLand card = "Land" `isInfixOf` card.typeLine
+  p In = identity
   p Out = not
 
 -- | Pick a rarity to choose from based on the mythic drop chance in the pack configuration
@@ -120,11 +121,14 @@ data StxCardType = Lesson | Archive
 pickStxRarity :: StxCardType -> IO Rarity
 pickStxRarity cardType = do
   let ratios = case cardType of
-        Lesson -> stxLessonRarities
-        Archive -> stxArchiveRarities
+        Generate.Lesson -> stxLessonRarities
+        Generate.Archive -> stxArchiveRarities
   rarityIdx <- getStdRandom (randomR (1, 8))
-  let (rarity, _) = fromMaybe (error "No matching rarity found in range") $ find (\(_, range) -> rarityIdx `elem` range) ratios
-  pure rarity
+  pure
+    . fst
+    . fromMaybe (error "No matching rarity found in range")
+    . find (\(_, range) -> rarityIdx `elem` range)
+    $ ratios
 
 -- | List of all the MTG rarities
 rarities :: [Rarity]
@@ -145,55 +149,55 @@ commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
       pure $ commonCards `S.union` foilCard
 
 -- | Plural of genPack
-genPacks :: PackConfig -> [CardObj] -> IO [Seq CardObj]
-genPacks config cards = replicateM (config ^. #amount) (genPack config cards)
+genPacks :: PackConfig -> List CardObj -> IO (List (Seq CardObj))
+genPacks config = replicateM config.amount . genPack config
 
 -- | Return basic lands belonging to the data set
-genLands :: PackConfig -> [CardObj] -> [HashSet CardObj]
-genLands config = pure . filterBasicLands In . filterBySet (config ^. #set) . S.fromList
+genLands :: PackConfig -> List CardObj -> List (HashSet CardObj)
+genLands config = pure . filterBasicLands In . filterBySet config.set . S.fromList
 
 -- | Generate the token cards for a given set
-genTokens :: PackConfig -> [CardObj] -> [HashSet CardObj]
-genTokens config = pure . filterBySet ('t' : config ^. #set) . S.fromList
+genTokens :: PackConfig -> List CardObj -> List (HashSet CardObj)
+genTokens config = pure . filterBySet ('t' : config.set) . S.fromList
 
 -- | Generate a random pack based on the pack configuration
-genPack :: PackConfig -> [CardObj] -> IO (Seq CardObj)
+genPack :: PackConfig -> List CardObj -> IO (Seq CardObj)
 genPack config cards =
-  if config ^. #set == "stx"
+  if config.set == "stx"
     then genStrixhavenPack config cards
     else do
-      let setCards = english . filterBySet (config ^. #set) . S.fromList . filterDesired $ cards
+      let setCards = english . filterBySet config.set . S.fromList . filterDesired $ cards
           base = filterBasicLands Out setCards
-          english = S.filter (\c -> c ^. #lang == "en")
+          english = S.filter (\c -> c.lang == "en")
           fbr r = filterByRarity r base
-          foils = S.filter (^. #foil) base
+          foils = S.filter (.foil) base
       commonWithMaybeFoilCards <-
-        commonWithMaybeFoil (config ^. #foilChance) (config ^. #commons) (fbr Common) foils
-      uncommonCards <- gen (config ^. #uncommons) (fbr Uncommon)
-      pick <- pickRareOrMythic (config ^. #mythicChance)
-      rareOrMythicCards <- gen (config ^. #rareOrMythics) (fbr pick)
+        commonWithMaybeFoil config.foilChance config.commons (fbr Common) foils
+      uncommonCards <- gen config.uncommons (fbr Uncommon)
+      pick <- pickRareOrMythic config.mythicChance
+      rareOrMythicCards <- gen config.rareOrMythics (fbr pick)
       pure $ fromSets [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards]
 
-fromSets :: [HashSet a] -> Seq a
+fromSets :: List (HashSet a) -> Seq a
 fromSets = foldr ((Sq.><) . Sq.fromList . S.toList) Sq.empty
 
 -- | Generate a strixhaven pack (has special rules)
-genStrixhavenPack :: PackConfig -> [CardObj] -> IO (Seq CardObj)
+genStrixhavenPack :: PackConfig -> List CardObj -> IO (Seq CardObj)
 genStrixhavenPack config cards = do
-  let stxCards = english . filterBySet (config ^. #set) . S.fromList . filterDesired $ cards
+  let stxCards = english . filterBySet config.set . S.fromList . filterDesired $ cards
       baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
       lessons = filterLesson In stxCards
       staCards = english . filterBySet "sta" . S.fromList $ cards
-      english = S.filter (\c -> c ^. #lang == "en")
+      english = S.filter (\card -> card.lang == "en")
       fbr r = filterByRarity r baseNoLesson
-      foils = S.filter (^. #foil) baseNoLesson
+      foils = S.filter (.foil) baseNoLesson
   -- Lesson card is picked individually, therefore remove 1 of the common card pick
   commonWithMaybeFoilCards <-
-    commonWithMaybeFoil (config ^. #foilChance) (config ^. #commons - 1) (fbr Common) foils
-  uncommonCards <- gen (config ^. #uncommons) (fbr Uncommon)
-  pick <- pickRareOrMythic (config ^. #mythicChance)
-  rareOrMythicCards <- gen (config ^. #rareOrMythics) (fbr pick)
-  lesson <- genByType 1 Lesson lessons
+    commonWithMaybeFoil config.foilChance (config.commons - 1) (fbr Common) foils
+  uncommonCards <- gen config.uncommons (fbr Uncommon)
+  pick <- pickRareOrMythic config.mythicChance
+  rareOrMythicCards <- gen config.rareOrMythics (fbr pick)
+  lesson <- genByType 1 Generate.Lesson lessons
   mysticalArchive <- genByType 1 Archive staCards
   pure $ fromSets [commonWithMaybeFoilCards, uncommonCards, rareOrMythicCards, lesson, mysticalArchive]
 

@@ -1,7 +1,7 @@
 cabal-version:      3.6
 category:           Tool
 name:               DraftGen
-version:            1.5.0.0
+version:            1.5.1.0
 synopsis:           Tool for generating booster packs in MTG
 description:
   Please see the README on GitHub at <https://github.com/skykanin/draftgen#readme>
@@ -17,28 +17,42 @@ build-type:         Simple
 tested-with:        GHC ==9.4.6
 extra-source-files: README.md
 
-common shared-properties
+common common-language
   default-language:   GHC2021
   default-extensions:
     NoFieldSelectors
     DeriveAnyClass
     DerivingStrategies
     DuplicateRecordFields
+    LambdaCase
     OverloadedLabels
+    OverloadedRecordDot
     OverloadedStrings
 
+common common-ghc-options
+  ghc-options:
+    -Wall -Wmissing-deriving-strategies -Wmissing-export-lists
+    -Wpartial-fields -Wredundant-constraints -Wunused-packages
+    -Wunused-type-patterns -Wno-name-shadowing
+
+common common-stanza
+  import: common-language
+  mixins:
+    base hiding (Prelude),
+    dg-prelude (Prelude)
+
 executable dg
-  import:         shared-properties
+  import:         common-language
   main-is:        Main.hs
   hs-source-dirs: src
   build-depends:
-    , base      ^>=4.17.2.0
+    , base
     , DraftGen
 
   ghc-options:    -threaded -Wall -O2
 
 library
-  import:          shared-properties
+  import:          common-stanza, common-ghc-options
   exposed-modules:
     CLI
     Encode
@@ -46,7 +60,6 @@ library
     Generate
     Optics
     Optics.Operators
-    Optics.Wreq
     Types
     Util
 
@@ -55,18 +68,33 @@ library
     , base                  ^>=4.17.2.0
     , bytestring
     , containers
+    , dg-prelude
     , directory
     , filepath
     , hashable
+    , http-client
+    , http-client-tls
     , optics-core
     , optparse-generic
     , random
     , transformers
     , unordered-containers
-    , wreq
 
   hs-source-dirs:  src/DraftGen
-  ghc-options:
-    -Wall -Wmissing-deriving-strategies -Wmissing-export-lists
-    -Wpartial-fields -Wredundant-constraints -Wunused-packages
-    -Wunused-type-patterns -Wno-name-shadowing
+
+test-suite unit-tests
+  import:         common-stanza
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test/src
+  main-is:        Main.hs
+  other-modules:
+  build-depends:
+    , base           ^>=4.17.2.0
+    , dg-prelude
+    , DraftGen
+    , exceptions
+    , filepath
+    , pretty-simple
+    , sandwich
+
+  ghc-options:    -threaded

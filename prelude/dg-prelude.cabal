@@ -1,0 +1,42 @@
+cabal-version: 3.6
+category:      Library
+name:          dg-prelude
+version:       1.0.0.0
+synopsis:      Custom Prelude
+homepage:      https://github.com/skykanin/draftgen
+bug-reports:   https://github.com/skykanin/draftgen/issues
+license:       GPL-3.0-or-later
+license-file:  LICENSE
+author:        skykanin
+maintainer:    3789764+skykanin@users.noreply.github.com
+copyright:     skykanin
+build-type:    Simple
+tested-with:   GHC ==9.4.6
+
+common common-language
+  default-language:   GHC2021
+  default-extensions:
+    NoFieldSelectors
+    DeriveAnyClass
+    DerivingStrategies
+    DuplicateRecordFields
+    LambdaCase
+    OverloadedLabels
+    OverloadedRecordDot
+    OverloadedStrings
+    PackageImports
+
+common common-ghc-options
+  ghc-options:
+    -Wall -Wmissing-deriving-strategies -Wmissing-export-lists
+    -Wpartial-fields -Wredundant-constraints -Wunused-packages
+    -Wunused-type-patterns -Wno-name-shadowing
+
+library
+  import:          common-language, common-ghc-options
+  build-depends:
+    , base         ^>=4.17.2.0
+    , optics-core
+
+  hs-source-dirs:  src
+  exposed-modules: Prelude

@@ -1,0 +1,81 @@
+name: Haskell CI
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: default
+
+    timeout-minutes: 120
+
+    env:
+      GHC_VERSION: "9.4.6"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v4
+
+      - name: Check Cachix token exists
+        env:
+          CACHIX_AUTH_TOKEN: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+        run: |
+          if [[ -z "$CACHIX_AUTH_TOKEN" ]]; then
+              echo "Must provide CACHIX_AUTH_TOKEN in environment" 1>&2
+              exit 1
+          fi
+
+      - name: Setup cachix cache
+        uses: cachix/cachix-action@v12
+        with:
+          name: draftgen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Cache ~/.cabal/packages, ~/.cabal/store and dist-newstyle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cabal/packages
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-${{ env.GHC_VERSION }}-${{ hashFiles('**/*.cabal', '**/cabal.project', '**/cabal.project.freeze') }}
+          restore-keys: ${{ runner.os }}-${{ env.GHC_VERSION }}-
+
+      - name: Check Nix environment
+        run: |
+          set -x
+
+          nix flake check
+          nix run .#check-formatting
+
+      - name: Check Haskell formatting
+        uses: haskell-actions/run-fourmolu@v9
+        with:
+          version: "0.10.1.0"
+          pattern: |
+            src/**/*.hs
+            prelude/**/*.hs
+            test/**/*.hs
+
+          # Don't follow symbolic links to .hs files.
+          follow-symbolic-links: false
+
+      - name: Update cabal packages
+        run: nix develop -c cabal update
+
+      - name: Build
+        run: nix develop -c cabal build test:unit-tests
+
+      - name: Run tests
+        run: nix develop -c cabal test

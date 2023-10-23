@@ -9,9 +9,6 @@
 -}
 module Encode (encodeCard, encodePacks) where
 
-import Control.Applicative ((<|>))
-import Data.Foldable (toList)
-import Data.Maybe (fromMaybe)
 import Data.Sequence qualified as Seq
 import Optics
 import Types
@@ -22,7 +19,7 @@ encodeCard card =
   withTTS $
     mkEmptyCard cardTransform
       & #customDeck %~ (Seq.|> mkCardImgObj card)
-      & #nickname ?~ card ^. #name
+      & #nickname ?~ card.name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
 encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
@@ -41,7 +38,7 @@ encodePack transformObj cardSet =
         & #containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
-encodePacks :: Foldable f => [f CardObj] -> TTSObj
+encodePacks :: Foldable f => List (f CardObj) -> TTSObj
 encodePacks = go defaultTTSObj 1 (0, 0)
  where
   go :: Foldable f => TTSObj -> Int -> (Int, Int) -> [f CardObj] -> TTSObj
@@ -85,7 +82,7 @@ mkTTSCardObj :: Int -> CardObj -> TTSCardObj
 mkTTSCardObj cardId cardObj =
   TTSCardObj
     { transform = cardTransform
-    , nickname = cardObj ^. #name
+    , nickname = cardObj.name
     , name = Card
     , cardID = cardId
     }
