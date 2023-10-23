@@ -9,8 +9,6 @@ on:
   push:
     tags:
       - "v*"
-  pull_request:
-    branches: ["main"]
 
 concurrency:
   group: release-${{ github.ref_name }}
