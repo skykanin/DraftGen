@@ -1,5 +1,14 @@
 {
   description = "Package build and dev environment for DraftGen";
+  # Ensure nixos and cachix cache is configured.
+  nixConfig = {
+    extra-substituters = ["https://cache.nixos.org" "https://draftgen.cachix.org"];
+
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "draftgen.cachix.org-1:/BJtp3sNMKJjHdzgOP34PWlqyjGg/R8fJDPPiI9BhUY="
+    ];
+  };
   inputs = {
     # Unofficial library of utilities for managing Nix Flakes.
     flake-utils.url = "github:numtide/flake-utils";
