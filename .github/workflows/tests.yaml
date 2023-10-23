@@ -65,6 +65,14 @@ jobs:
         uses: haskell-actions/run-fourmolu@v9
         with:
           version: "0.10.1.0"
+          # Only check the format of .hs in the src/ directory.
+          pattern: |
+            src/**/*.hs
+            prelude/**/*.hs
+            test/**/*.hs
+
+          # Don't follow symbolic links to .hs files.
+          follow-symbolic-links: false
 
       - name: Update cabal packages
         run: nix develop -c cabal update
