@@ -3,8 +3,6 @@ name: Haskell CI
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 permissions:
   contents: read
@@ -65,7 +63,6 @@ jobs:
         uses: haskell-actions/run-fourmolu@v9
         with:
           version: "0.10.1.0"
-          # Only check the format of .hs in the src/ directory.
           pattern: |
             src/**/*.hs
             prelude/**/*.hs
