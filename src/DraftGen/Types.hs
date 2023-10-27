@@ -119,6 +119,7 @@ data FrameEffect
   | Borderless
   | Textless
   | Fullart
+  | Vehicle
   deriving stock (Eq, Generic, Show)
 
 instance Hashable FrameEffect
