@@ -96,5 +96,6 @@ test-suite unit-tests
     , filepath
     , pretty-simple
     , sandwich
+    , unordered-containers
 
   ghc-options:    -threaded
