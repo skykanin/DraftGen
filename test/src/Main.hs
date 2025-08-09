@@ -34,7 +34,7 @@ filterExamples =
         , (1, "Sauron, the Dark Lord.json")
         ]
 
-testFilters :: (MonadThrow m) => Int -> Either String (List CardObj) -> m ()
+testFilters :: MonadThrow m => Int -> Either String (List CardObj) -> m ()
 testFilters expectedLength eitherCards =
   case eitherCards of
     Left err -> unexpectedError err

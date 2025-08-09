@@ -169,7 +169,7 @@ genPack config cards =
   if config.set == "stx"
     then genStrixhavenPack config cards
     else do
-      let setCards =  english . filterBySet config.set . filterDesired $ cards
+      let setCards = english . filterBySet config.set . filterDesired $ cards
           base = filterBasicLands Out setCards
           english = S.filter (\c -> c.lang == "en")
           fbr r = filterByRarity r base

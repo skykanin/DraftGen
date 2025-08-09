@@ -50,8 +50,8 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
         ghc:
-          - "9.4.6"
-        cabal: ["3.10.1.0"]
+          - "9.8.4"
+        cabal: ["3.14.2.0"]
         include:
           - os: ubuntu-latest
             args: --best --lzma
@@ -72,10 +72,10 @@ jobs:
           tagRegexGroup: 1
 
       - name: Setup Haskell
-        uses: haskell-actions/setup@v2.5.1
+        uses: haskell-actions/setup@v2.8.1
         with:
-          ghc-version: "9.4.6"
-          cabal-version: "3.10.1.0"
+          ghc-version: "9.8.4"
+          cabal-version: "3.14.2.0"
 
       - name: Cache ~/.cabal/store
         uses: actions/cache@v3.3.2

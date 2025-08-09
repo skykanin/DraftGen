@@ -14,6 +14,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
 import Data.Aeson (eitherDecode, encodeFile)
 import Data.ByteString.Lazy qualified as B
+import Data.HashSet (HashSet)
 import Encode (encodeCard, encodePacks)
 import Generate (findCard, genLands, genPacks, genTokens, readCards)
 import Network.HTTP.Client
@@ -24,7 +25,6 @@ import Text.Printf (printf)
 import Types (BulkDataObj, CardObj, fromArgs)
 import Types qualified
 import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
-import Data.HashSet (HashSet)
 
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
@@ -102,9 +102,11 @@ getLatestCards cardPath = do
  where
   get manager url = do
     request <- parseRequest $ "GET " <> url
-    let request' = request { requestHeaders = [
-                               ("Accept","application/json"),
-                               ("User-Agent","draftgen/1.5.2.0")
-                               ]
-                           }
+    let request' =
+          request
+            { requestHeaders =
+                [ ("Accept", "application/json")
+                , ("User-Agent", "draftgen/1.5.2.0")
+                ]
+            }
     httpLbs request' manager
