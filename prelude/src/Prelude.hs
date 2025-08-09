@@ -34,14 +34,14 @@ import Control.Monad
 import Data.Either
 import Data.Foldable
 import Data.Functor
-import Data.List hiding (uncons)
+import Data.List hiding (uncons, unsnoc, unzip)
 import Data.Maybe hiding (fromJust)
 import Data.Monoid
 import Data.Traversable
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 import Optics.Core
 import "base" Prelude hiding (id)
-import "base" Prelude qualified as P
+import "base" Prelude qualified as P hiding (unzip)
 
 -- | Prefix list name
 type List = []

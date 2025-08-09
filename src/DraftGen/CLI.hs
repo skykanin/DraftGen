@@ -57,11 +57,7 @@ instance ParseRecord (Args Wrapped) where
 
 deriving stock instance Show (Args Unwrapped)
 
-type Numerator = Int
-
-type Denominator = Int
-
-data Ratio = Ratio Numerator Denominator
+data Ratio = Ratio Int Int
   deriving stock (Eq, Generic)
   deriving anyclass (ParseRecord, ParseField, ParseFields)
 
