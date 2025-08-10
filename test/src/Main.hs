@@ -11,6 +11,8 @@ module Main where
 
 import Control.Monad.Catch
 import Control.Monad.IO.Class
+import Data.HashSet (HashSet)
+import Data.HashSet qualified as HS
 import Generate (filterDesired, readCards)
 import System.FilePath
 import Test.Sandwich
@@ -34,14 +36,14 @@ filterExamples =
         , (1, "Sauron, the Dark Lord.json")
         ]
 
-testFilters :: (MonadThrow m) => Int -> Either String (List CardObj) -> m ()
+testFilters :: (MonadIO m, MonadThrow m) => Int -> Either String (HashSet CardObj) -> m ()
 testFilters expectedLength eitherCards =
   case eitherCards of
     Left err -> unexpectedError err
     Right cards -> do
       let result = filterDesired cards
-      length result `shouldBe` expectedLength
-      let [cardObj] = result
+      HS.size result `shouldBe` expectedLength
+      let [cardObj] = HS.toList result
       cardObj.promo `shouldBe` False
       cardObj.reprint `shouldBe` False
       cardObj.fullArt `shouldBe` False

@@ -18,8 +18,10 @@ encodeCard :: CardObj -> TTSObj
 encodeCard card =
   withTTS $
     mkEmptyCard cardTransform
-      & #customDeck %~ (Seq.|> mkCardImgObj card)
-      & #nickname ?~ card.name
+      & #customDeck
+      %~ (Seq.|> mkCardImgObj card)
+      & #nickname
+      ?~ card.name
 
 -- | Map position data and set of cards into a GameObj representing a single pack
 encodePack :: Foldable f => TransformObj -> f CardObj -> GameObj
@@ -33,9 +35,12 @@ encodePack transformObj cardSet =
    where
     updatedPackObj =
       packObj
-        & #customDeck %~ (Seq.|> mkCardImgObj cardObj)
-        & #deckIDs %~ (Seq.|> cardId)
-        & #containedObjects %~ (Seq.|> mkTTSCardObj cardId cardObj)
+        & #customDeck
+        %~ (Seq.|> mkCardImgObj cardObj)
+        & #deckIDs
+        %~ (Seq.|> cardId)
+        & #containedObjects
+        %~ (Seq.|> mkTTSCardObj cardId cardObj)
 
 -- | Encode list of packs into a single TTSObj
 encodePacks :: Foldable f => List (f CardObj) -> TTSObj
@@ -48,11 +53,14 @@ encodePacks = go defaultTTSObj 1 (0, 0)
    where
     newTTSObj =
       ttsObj
-        & #objectStates <>~ [encodePack packPosition pack]
+        & #objectStates
+        <>~ [encodePack packPosition pack]
     packPosition =
       packTransform
-        & #posX +~ x
-        & #posZ +~ z
+        & #posX
+        +~ x
+        & #posZ
+        +~ z
     checkX xVal
       | counter `mod` cutOff == 0 && counter > 0 = 0
       | otherwise = xInc + xVal
@@ -102,8 +110,14 @@ mkCardImgObj cardObj =
     , faceURL =
         -- First try to get image from card faces then try base image uri field, otherwise error
         fromMaybe (error "No faceURL found") $
-          cardObj ^? #cardFaces % _head % #imageUris %? #png
-            <|> cardObj ^? #imageUris %? #png
+          cardObj
+            ^? #cardFaces
+            % _head
+            % #imageUris
+            %? #png
+            <|> cardObj
+            ^? #imageUris
+            %? #png
     }
 
 mkEmptyCard :: TransformObj -> GameObj

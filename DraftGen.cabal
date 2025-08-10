@@ -1,7 +1,7 @@
 cabal-version:      3.6
 category:           Tool
 name:               DraftGen
-version:            1.5.1.0
+version:            1.5.2.0
 synopsis:           Tool for generating booster packs in MTG
 description:
   Please see the README on GitHub at <https://github.com/skykanin/draftgen#readme>
@@ -65,7 +65,7 @@ library
 
   build-depends:
     , aeson
-    , base                  ^>=4.17.2.0
+    , base                  ^>=4.19.2.0
     , bytestring
     , containers
     , dg-prelude
@@ -89,12 +89,13 @@ test-suite unit-tests
   main-is:        Main.hs
   other-modules:
   build-depends:
-    , base           ^>=4.17.2.0
+    , base           ^>=4.19.2.0
     , dg-prelude
     , DraftGen
     , exceptions
     , filepath
     , pretty-simple
     , sandwich
+    , unordered-containers
 
   ghc-options:    -threaded

@@ -14,6 +14,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
 import Data.Aeson (eitherDecode, encodeFile)
 import Data.ByteString.Lazy qualified as B
+import Data.HashSet (HashSet)
 import Encode (encodeCard, encodePacks)
 import Generate (findCard, genLands, genPacks, genTokens, readCards)
 import Network.HTTP.Client
@@ -61,7 +62,7 @@ execute = (either print pure =<<) $
         liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
 
 -- | Find card and write to file if it exists
-searchCard :: String -> List CardObj -> IO ()
+searchCard :: String -> HashSet CardObj -> IO ()
 searchCard query cards = do
   case findCard query cards of
     Nothing -> putStrLn "Card not found"
@@ -89,8 +90,9 @@ getLatestCards :: FilePath -> IO (Either String FilePath)
 getLatestCards cardPath = do
   manager <- newManager tlsManagerSettings
   response <- get manager "https://api.scryfall.com/bulk-data/default-cards"
+  print response.responseBody
   let eCards :: Either String BulkDataObj
-      eCards = eitherDecode $ response.responseBody
+      eCards = eitherDecode response.responseBody
   case eCards of
     Left err -> pure $ Left err
     Right cardData -> do
@@ -100,4 +102,11 @@ getLatestCards cardPath = do
  where
   get manager url = do
     request <- parseRequest $ "GET " <> url
-    httpLbs request manager
+    let request' =
+          request
+            { requestHeaders =
+                [ ("Accept", "application/json")
+                , ("User-Agent", "draftgen/1.5.2.0")
+                ]
+            }
+    httpLbs request' manager

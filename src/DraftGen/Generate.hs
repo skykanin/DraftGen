@@ -38,8 +38,11 @@ import Types
 import Types qualified
 
 -- | Read cards from filepath into memory
-readCards :: FilePath -> IO (Either String (List CardObj))
-readCards = eitherDecodeFileStrict
+--
+-- Converting to a List to a HashSet using `S.fromList` is expensive on time
+-- minimize the amount of times this is done
+readCards :: FilePath -> IO (Either String (HashSet CardObj))
+readCards = (fmap . fmap) S.fromList . eitherDecodeFileStrict
 
 -- | Filter cards by MTG set predicate
 filterBySet :: String -> HashSet CardObj -> HashSet CardObj
@@ -54,7 +57,7 @@ unwantedFrameEffects :: List FrameEffect
 unwantedFrameEffects = [Draft, ExtendedArt, Inverted, Showcase]
 
 -- | Search for a card in the a set of cards
-findCard :: String -> List CardObj -> Maybe CardObj
+findCard :: String -> HashSet CardObj -> Maybe CardObj
 findCard query = find matchName . filterDesired
  where
   matchName c = query' `isPrefixOf` cardName
@@ -63,8 +66,8 @@ findCard query = find matchName . filterDesired
     cardName = map toLower c.name
 
 -- | Filter out undesired card types
-filterDesired :: List CardObj -> List CardObj
-filterDesired = filter $ \card ->
+filterDesired :: HashSet CardObj -> HashSet CardObj
+filterDesired = S.filter $ \card ->
   all
     ($ card)
     [ \card -> card.layout `notElem` unwantedLayout
@@ -149,24 +152,24 @@ commonWithMaybeFoil (Ratio numerator denominator) n commonSet foilSet = do
       pure $ commonCards `S.union` foilCard
 
 -- | Plural of genPack
-genPacks :: PackConfig -> List CardObj -> IO (List (Seq CardObj))
+genPacks :: PackConfig -> HashSet CardObj -> IO (List (Seq CardObj))
 genPacks config = replicateM config.amount . genPack config
 
 -- | Return basic lands belonging to the data set
-genLands :: PackConfig -> List CardObj -> List (HashSet CardObj)
-genLands config = pure . filterBasicLands In . filterBySet config.set . S.fromList
+genLands :: PackConfig -> HashSet CardObj -> List (HashSet CardObj)
+genLands config = pure . filterBasicLands In . filterBySet config.set
 
 -- | Generate the token cards for a given set
-genTokens :: PackConfig -> List CardObj -> List (HashSet CardObj)
-genTokens config = pure . filterBySet ('t' : config.set) . S.fromList
+genTokens :: PackConfig -> HashSet CardObj -> List (HashSet CardObj)
+genTokens config = pure . filterBySet ('t' : config.set)
 
 -- | Generate a random pack based on the pack configuration
-genPack :: PackConfig -> List CardObj -> IO (Seq CardObj)
+genPack :: PackConfig -> HashSet CardObj -> IO (Seq CardObj)
 genPack config cards =
   if config.set == "stx"
     then genStrixhavenPack config cards
     else do
-      let setCards = english . filterBySet config.set . S.fromList . filterDesired $ cards
+      let setCards = english . filterBySet config.set . filterDesired $ cards
           base = filterBasicLands Out setCards
           english = S.filter (\c -> c.lang == "en")
           fbr r = filterByRarity r base
@@ -182,12 +185,12 @@ fromSets :: List (HashSet a) -> Seq a
 fromSets = foldr ((Sq.><) . Sq.fromList . S.toList) Sq.empty
 
 -- | Generate a strixhaven pack (has special rules)
-genStrixhavenPack :: PackConfig -> List CardObj -> IO (Seq CardObj)
+genStrixhavenPack :: PackConfig -> HashSet CardObj -> IO (Seq CardObj)
 genStrixhavenPack config cards = do
-  let stxCards = english . filterBySet config.set . S.fromList . filterDesired $ cards
+  let stxCards = english . filterBySet config.set . filterDesired $ cards
       baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
       lessons = filterLesson In stxCards
-      staCards = english . filterBySet "sta" . S.fromList $ cards
+      staCards = english . filterBySet "sta" $ cards
       english = S.filter (\card -> card.lang == "en")
       fbr r = filterByRarity r baseNoLesson
       foils = S.filter (.foil) baseNoLesson

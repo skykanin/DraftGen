@@ -108,6 +108,8 @@ data FrameEffect
   | WaxingAndWaningMoonDfc
   | Showcase
   | ExtendedArt
+  | Enchantment
+  | Spree
   | Companion
   | Etched
   | Snow
@@ -198,6 +200,7 @@ data BorderColor
   | ColorSilver
   | ColorGold
   | ColorBorderless
+  | ColorYellow
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable)
 

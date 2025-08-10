@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 120
 
     env:
-      GHC_VERSION: "9.4.6"
+      GHC_VERSION: "9.8.4"
 
     steps:
       - uses: actions/checkout@v3
@@ -62,9 +62,9 @@ jobs:
           nix run .#check-formatting
 
       - name: Check Haskell formatting
-        uses: haskell-actions/run-fourmolu@v9
+        uses: haskell-actions/run-fourmolu@v11
         with:
-          version: "0.10.1.0"
+          version: "0.15.0.0"
           pattern: |
             src/**/*.hs
             prelude/**/*.hs

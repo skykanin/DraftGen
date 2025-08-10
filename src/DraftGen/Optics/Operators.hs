@@ -13,8 +13,6 @@ module Optics.Operators
   )
 where
 
-import Optics.Core (A_Setter, Is, Optic, (%~))
-
 (+~) :: (Num a, Is k A_Setter) => Optic k is s t a a -> a -> s -> t
 v +~ y = v %~ (+ y)
 
