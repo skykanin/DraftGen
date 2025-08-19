@@ -46,17 +46,20 @@
         };
         devShells.default = let
           hpkgs = pkgs.haskell.packages.ghc98;
-          tools = with hpkgs; [
-            cabal-fmt
-            cabal-install
-            fourmolu
-            ghc
-            ghc-prof-flamegraph
-            ghcid
-            pkgs.haskell-language-server
-            pkgs.nixd
-            profiteur
-          ];
+          tools = with hpkgs;
+            [
+              cabal-fmt
+              cabal-install
+              fourmolu
+              ghc
+              ghc-prof-flamegraph
+              ghcid
+              profiteur
+            ]
+            ++ (with pkgs; [
+              haskell-language-server
+              nixd
+            ]);
           libraries = [
             pkgs.zlib
           ];

@@ -27,3 +27,4 @@ cabal.project.local~
 .ghc.environment.*
 data/
 test_runs/
+dg.svg
