@@ -74,7 +74,7 @@ fileName cfg name
   | otherwise = printf "%s%s.json" cfg.set name
 
 fromArgs :: Args Unwrapped -> PackConfig
-fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
+fromArgs (Args s a c uc r mc fc) = PackConfig a s c uc r mc fc
 
 -- Lowercase string
 toLowerCase :: String -> String
