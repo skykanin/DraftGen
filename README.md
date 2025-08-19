@@ -4,7 +4,7 @@
 An MTG booster pack generator for [Tabletop Simulator](https://store.steampowered.com/app/286160/Tabletop_Simulator/).
 
 # Documentation
-![options](https://i.imgur.com/WDUyeUa.png)
+Use `--help` for documentation.
 
 DraftGen lets you generate booster packs for MTG. The default options are set to simulate the rules and drop rates of regular booster packs. The default card set to generate packs from is the latest core set. These options can be changed by passing arguments through the command line. All arguments are listed in the help section `dg --help`. DraftGen will print the paths where the resulting json files are written depending upon your platform.
 
