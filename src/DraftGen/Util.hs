@@ -20,19 +20,21 @@ where
 import Data.Char
 
 snakeCase :: String -> String
-snakeCase =  symbCase '_'
+snakeCase = symbCase '_'
 
 -- | Generic casing for symbol separated names
 symbCase :: Char -> (String -> String)
-symbCase sym =  u . applyFirst toLower
-  where u []                       = []
-        u (x:xs) | isUpper x = sym : toLower x : u xs
-                 | otherwise = x : u xs
+symbCase sym = u . applyFirst toLower
+ where
+  u [] = []
+  u (x : xs)
+    | isUpper x = sym : toLower x : u xs
+    | otherwise = x : u xs
 
 applyFirst :: (Char -> Char) -> String -> String
-applyFirst _ []     = []
-applyFirst f [x]    = [f x]
-applyFirst f (x:xs) = f x: xs
+applyFirst _ [] = []
+applyFirst f [x] = [f x]
+applyFirst f (x : xs) = f x : xs
 
 appName :: FilePath
 appName = "DraftGen"

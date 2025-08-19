@@ -54,7 +54,6 @@ import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import GHC.Generics (Generic)
 import Text.Printf (printf)
-
 import Util (packName, snakeCase)
 
 data PackConfig = PackConfig
@@ -67,7 +66,6 @@ data PackConfig = PackConfig
   , foilChance :: Ratio
   }
   deriving stock (Generic, Show)
-
 
 -- | Produce filename with set and pack amount information
 fileName :: PackConfig -> String -> String
@@ -88,7 +86,7 @@ data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
 instance Hashable Rarity
 
 instance ToJSON Rarity where
-  toJSON = genericToJSON defaultOptions { constructorTagModifier = toLowerCase }
+  toJSON = genericToJSON defaultOptions {constructorTagModifier = toLowerCase}
 
 instance FromJSON Rarity where
   parseJSON =
@@ -164,7 +162,7 @@ data CardFace = CardFace
   deriving anyclass (Hashable)
 
 instance ToJSON CardFace where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = snakeCase }
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = snakeCase}
 
 instance FromJSON CardFace where
   parseJSON = withObject "CardFace" $ \v ->
@@ -199,9 +197,11 @@ instance Eq CardObj where
     cardObjA.name == cardObjB.name
 
 instance ToJSON CardObj where
-  toJSON = genericToJSON defaultOptions
-    { fieldLabelModifier = snakeCase
-    }
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = snakeCase
+        }
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
@@ -239,13 +239,15 @@ instance ToJSON BorderColor where
   toJSON =
     genericToJSON
       defaultOptions
-      { constructorTagModifier = toLowerCase . drop 5 }
+        { constructorTagModifier = toLowerCase . drop 5
+        }
 
 instance FromJSON BorderColor where
   parseJSON =
     genericParseJSON
       defaultOptions
-        { constructorTagModifier = toLowerCase . drop 5 }
+        { constructorTagModifier = toLowerCase . drop 5
+        }
 
 data BulkDataObj = BulkDataObj
   { id :: String
@@ -264,18 +266,18 @@ instance FromJSON BulkDataObj where
       <*> v .: "download_uri"
 
 data SetInfo = SetInfo
-  { id :: String,
-    code :: String,
-    searchUri :: String,
-    releasedAt :: String,
-    setType :: String,
-    cardCount:: Int
+  { id :: String
+  , code :: String
+  , searchUri :: String
+  , releasedAt :: String
+  , setType :: String
+  , cardCount :: Int
   }
   deriving stock (Generic, Show)
 
-instance FromJSON SetInfo  where
+instance FromJSON SetInfo where
   parseJSON = withObject "SetInfo" $ \v ->
-     SetInfo
+    SetInfo
       <$> v .: "id"
       <*> v .: "code"
       <*> v .: "search_uri"
@@ -298,7 +300,6 @@ instance FromJSON SetDataObj where
       <*> v .: "total_cards"
       <*> v .: "has_more"
       <*> v .: "data"
-
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty

@@ -9,8 +9,9 @@
 -}
 module File (execute) where
 
+import CLI
 import Control.Concurrent.Async qualified as Async
-import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
 import Data.Aeson qualified as Json
 import Data.ByteString.Char8 qualified as BS
@@ -18,18 +19,16 @@ import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HS
 import Data.Version (showVersion)
+import Encode (encodePacks)
+import Generate (genLands, genPacks, genTokens)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
-import System.FilePath ((</>), (<.>))
-
-import CLI
 import Paths_DraftGen qualified as Paths
-import Types (CardObj, SetDataObj(..), SetInfo(..), PackConfig(..), fromArgs, fileName)
-import Util (appName, landName, packName, tokenName)
-import System.Directory ( getXdgDirectory, XdgDirectory(..), doesFileExist, createDirectoryIfMissing )
-import Generate (genPacks, genTokens, genLands)
-import Encode (encodePacks)
+import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
+import System.FilePath ((<.>), (</>))
 import Text.Printf (printf)
+import Types (CardObj, PackConfig (..), SetDataObj (..), SetInfo (..), fileName, fromArgs)
+import Util (appName, landName, packName, tokenName)
 
 execute :: IO ()
 execute = (either putStrLn pure <=< runExceptT) $ do
@@ -63,13 +62,13 @@ getFromCache set = do
   let filepath = cachePrefixPath </> set <.> "json"
   setFileExists <- liftIO $ doesFileExist filepath
   if setFileExists
-  then ExceptT $ readCards filepath
-  else do
-    cards <- fetchSet set
-    liftIO $ writeSet set cards
-    pure cards
-  where
-    readCards = (fmap . fmap) HS.fromList . liftIO . Json.eitherDecodeFileStrict
+    then ExceptT $ readCards filepath
+    else do
+      cards <- fetchSet set
+      liftIO $ writeSet set cards
+      pure cards
+ where
+  readCards = (fmap . fmap) HS.fromList . liftIO . Json.eitherDecodeFileStrict
 
 writeSet :: String -> HashSet CardObj -> IO ()
 writeSet set cards = do
@@ -80,17 +79,16 @@ writeSet set cards = do
 getScryfall :: Manager -> String -> [(BS.ByteString, Maybe BS.ByteString)] -> IO (Response BSL.ByteString)
 getScryfall manager url queryParams = do
   req <- parseRequest url
-  let
-    version = BS.pack $ showVersion Paths.version
-    req' =
-        req { requestHeaders =
+  let version = BS.pack $ showVersion Paths.version
+      req' =
+        req
+          { requestHeaders =
               [ ("Accept", "application/json")
               , ("User-Agent", "draftgen/" `BS.append` version)
               ]
-            }
-        & setQueryString queryParams
+          }
+          & setQueryString queryParams
   httpLbs req' manager
-
 
 -- Fetch all cards from a given set through scryfall
 fetchSet :: MonadIO m => String -> ExceptT String m (HashSet CardObj)
@@ -100,15 +98,18 @@ fetchSet set = do
   setInfo <- ExceptT . pure $ Json.eitherDecode @SetInfo setInfoRes.responseBody
   let pages :: [Int] =
         enumFromTo 1 $ ceiling $ fromIntegral @_ @Double setInfo.cardCount / 175
-      getSetData page = getScryfall manager "https://api.scryfall.com/cards/search" [
-                  ("include_extras", Just "true"),
-                  ("order", Just "set"),
-                  ("include_multilingual", Just "false"),
-                  ("include_variations", Just "false"),
-                  ("unique", Just "prints"),
-                  ("q", Just $ "e:" `BS.append` BS.pack set),
-                  ("page", Just . BS.pack $ show page)
-                ]
+      getSetData page =
+        getScryfall
+          manager
+          "https://api.scryfall.com/cards/search"
+          [ ("include_extras", Just "true")
+          , ("order", Just "set")
+          , ("include_multilingual", Just "false")
+          , ("include_variations", Just "false")
+          , ("unique", Just "prints")
+          , ("q", Just $ "e:" `BS.append` BS.pack set)
+          , ("page", Just . BS.pack $ show page)
+          ]
   results <- liftIO $ Async.mapConcurrently getSetData pages
   cards <- ExceptT . pure $ concatMap (.cardData) <$> traverse (Json.eitherDecode @SetDataObj . (.responseBody)) results
   pure $ HS.fromList cards
