@@ -2,29 +2,51 @@
    Module      : File
    License     : GNU GPL, version 3 or above
    Maintainer  : skykanin <3789764+skykanin@users.noreply.github.com>
-   Stability   : alpha
+   Stability   : stable
    Portability : portable
 
  Module for handling reading from and writing to files
 -}
 module File (execute) where
 
-import CLI (Args (..), Unwrapped, unwrapRecord)
-import Control.Monad.IO.Class (liftIO)
+import Control.Concurrent.Async qualified as Async
+import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
-import Data.Aeson (eitherDecode, encodeFile)
-import Data.ByteString.Lazy qualified as B
+import Data.Aeson qualified as Json
+import Data.ByteString.Char8 qualified as BS
+import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.HashSet (HashSet)
-import Encode (encodeCard, encodePacks)
-import Generate (findCard, genLands, genPacks, genTokens, readCards)
+import Data.HashSet qualified as HS
+import Data.Version (showVersion)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
-import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
-import System.FilePath ((</>))
+import System.FilePath ((</>), (<.>))
+
+import CLI
+import Paths_DraftGen qualified as Paths
+import Types (CardObj, SetDataObj(..), SetInfo(..), PackConfig(..), fromArgs, fileName)
+import Util (appName, landName, packName, tokenName)
+import System.Directory ( getXdgDirectory, XdgDirectory(..), doesFileExist, createDirectoryIfMissing )
+import Generate (genPacks, genTokens, genLands)
+import Encode (encodePacks)
 import Text.Printf (printf)
-import Types (BulkDataObj, CardObj, fromArgs)
-import Types qualified
-import Util (appName, cardCacheName, fileName, landName, packName, tokenName)
+
+execute :: IO ()
+execute = (either putStrLn pure <=< runExceptT) $ do
+  rawArgs <- liftIO $ unwrapRecord ""
+  args <- ExceptT . pure $ validateArgs rawArgs
+  let config = fromArgs args
+      ln = fileName config landName
+      pn = fileName config packName
+      tn = fileName config tokenName
+  cards <- getFromCache config.set
+  dataPath <- liftIO $ getXdgDirectory XdgData appName
+  liftIO $ createDirectoryIfMissing True dataPath
+  selectedCards <- liftIO $ genPacks config cards
+  liftIO $ Json.encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
+  liftIO $ Json.encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
+  liftIO $ Json.encodeFile (dataPath </> pn) $ encodePacks selectedCards
+  liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
 
 -- | Check that integer arguments aren't negative
 validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
@@ -35,78 +57,58 @@ validateArgs as
   | as.rares < 0 = Left "Error: rares is negative"
   | otherwise = Right as
 
-execute :: IO ()
-execute = (either print pure =<<) $
-  runExceptT $ do
-    x <- liftIO $ unwrapRecord ""
-    args <- ExceptT $ pure $ validateArgs x
-    cachePath <- liftIO $ getXdgDirectory XdgCache appName
-    _ <- liftIO $ createDirectoryIfMissing True cachePath
-    cardCache <-
-      ExceptT . getFromCache args.downloadCards $ cachePath </> cardCacheName
-    cards <- ExceptT $ readCards cardCache
-    -- If argument is passed to a card search otherwise generate packs
-    case args.getCard of
-      Just query -> liftIO $ searchCard query cards
-      Nothing -> do
-        let config = fromArgs args
-            ln = fileName config landName
-            pn = fileName config packName
-            tn = fileName config tokenName
-        dataPath <- liftIO $ getXdgDirectory XdgData appName
-        _ <- liftIO $ createDirectoryIfMissing True dataPath
-        selectedCards <- liftIO $ genPacks config cards
-        _ <- liftIO $ encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
-        _ <- liftIO $ encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
-        _ <- liftIO $ encodeFile (dataPath </> pn) $ encodePacks selectedCards
-        liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
+getFromCache :: MonadIO m => String -> ExceptT String m (HashSet CardObj)
+getFromCache set = do
+  cachePrefixPath <- liftIO $ getXdgDirectory XdgCache appName
+  let filepath = cachePrefixPath </> set <.> "json"
+  setFileExists <- liftIO $ doesFileExist filepath
+  if setFileExists
+  then ExceptT $ readCards filepath
+  else do
+    cards <- fetchSet set
+    liftIO $ writeSet set cards
+    pure cards
+  where
+    readCards = (fmap . fmap) HS.fromList . liftIO . Json.eitherDecodeFileStrict
 
--- | Find card and write to file if it exists
-searchCard :: String -> HashSet CardObj -> IO ()
-searchCard query cards = do
-  case findCard query cards of
-    Nothing -> putStrLn "Card not found"
-    Just card -> do
-      dataPath <- liftIO $ getXdgDirectory XdgData appName
-      let cardObj = encodeCard card
-          filePath = dataPath </> query <> ".json"
-      encodeFile filePath cardObj
-      printf "Card generated at: %s" filePath
+writeSet :: String -> HashSet CardObj -> IO ()
+writeSet set cards = do
+  cachePathPrefix <- liftIO $ getXdgDirectory XdgCache appName
+  Json.encodeFile (cachePathPrefix </> set <> ".json") cards
 
--- | If card cache already exists return them unless a flush is forced otherwise fetch them from scryfall
-getFromCache :: Bool -> FilePath -> IO (Either String FilePath)
-getFromCache force cardPath = doesFileExist cardPath >>= choice force
- where
-  choice toForce cardsExists
-    | toForce = updateCache
-    | cardsExists = pure $ Right cardPath
-    | otherwise = updateCache
-   where
-    msg = putStrLn "Updating cache..."
-    updateCache = msg *> getLatestCards cardPath
-
--- | Get the latest card set from scryfall and write it to a json file
-getLatestCards :: FilePath -> IO (Either String FilePath)
-getLatestCards cardPath = do
-  manager <- newManager tlsManagerSettings
-  response <- get manager "https://api.scryfall.com/bulk-data/default-cards"
-  print response.responseBody
-  let eCards :: Either String BulkDataObj
-      eCards = eitherDecode response.responseBody
-  case eCards of
-    Left err -> pure $ Left err
-    Right cardData -> do
-      cardBinData <- get manager cardData.downloadUri
-      B.writeFile cardPath cardBinData.responseBody
-      pure $ Right cardPath
- where
-  get manager url = do
-    request <- parseRequest $ "GET " <> url
-    let request' =
-          request
-            { requestHeaders =
-                [ ("Accept", "application/json")
-                , ("User-Agent", "draftgen/1.5.2.0")
-                ]
+-- Make a GET request to the scryfall API
+getScryfall :: Manager -> String -> [(BS.ByteString, Maybe BS.ByteString)] -> IO (Response BSL.ByteString)
+getScryfall manager url queryParams = do
+  req <- parseRequest url
+  let
+    version = BS.pack $ showVersion Paths.version
+    req' =
+        req { requestHeaders =
+              [ ("Accept", "application/json")
+              , ("User-Agent", "draftgen/" `BS.append` version)
+              ]
             }
-    httpLbs request' manager
+        & setQueryString queryParams
+  httpLbs req' manager
+
+
+-- Fetch all cards from a given set through scryfall
+fetchSet :: MonadIO m => String -> ExceptT String m (HashSet CardObj)
+fetchSet set = do
+  manager <- liftIO $ newManager tlsManagerSettings
+  setInfoRes <- liftIO $ getScryfall manager ("https://api.scryfall.com/sets" </> set) []
+  setInfo <- ExceptT . pure $ Json.eitherDecode @SetInfo setInfoRes.responseBody
+  let pages :: [Int] =
+        enumFromTo 1 $ ceiling $ fromIntegral @_ @Double setInfo.cardCount / 175
+      getSetData page = getScryfall manager "https://api.scryfall.com/cards/search" [
+                  ("include_extras", Just "true"),
+                  ("order", Just "set"),
+                  ("include_multilingual", Just "false"),
+                  ("include_variations", Just "false"),
+                  ("unique", Just "prints"),
+                  ("q", Just $ "e:" `BS.append` BS.pack set),
+                  ("page", Just . BS.pack $ show page)
+                ]
+  results <- liftIO $ Async.mapConcurrently getSetData pages
+  cards <- ExceptT . pure $ concatMap (.cardData) <$> traverse (Json.eitherDecode @SetDataObj . (.responseBody)) results
+  pure $ HS.fromList cards

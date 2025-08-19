@@ -15,6 +15,8 @@ module Types
   , CardFace (..)
   , CardObj (..)
   , BulkDataObj (..)
+  , SetInfo (..)
+  , SetDataObj (..)
   , CardImgObj (..)
   , ObjType (..)
   , TransformObj (..)
@@ -23,6 +25,7 @@ module Types
   , TTSObj (..)
   , BorderColor (..)
   , fromArgs
+  , fileName
   )
 where
 
@@ -50,6 +53,9 @@ import Data.Hashable (Hashable)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import GHC.Generics (Generic)
+import Text.Printf (printf)
+
+import Util (packName, snakeCase)
 
 data PackConfig = PackConfig
   { amount :: Int
@@ -62,8 +68,15 @@ data PackConfig = PackConfig
   }
   deriving stock (Generic, Show)
 
+
+-- | Produce filename with set and pack amount information
+fileName :: PackConfig -> String -> String
+fileName cfg name
+  | name == packName = printf "%d%s%s.json" cfg.amount cfg.set name
+  | otherwise = printf "%s%s.json" cfg.set name
+
 fromArgs :: Args Unwrapped -> PackConfig
-fromArgs (Args s a c uc r mc fc _ _) = PackConfig a s c uc r mc fc
+fromArgs (Args s a c uc r mc fc _) = PackConfig a s c uc r mc fc
 
 -- Lowercase string
 toLowerCase :: String -> String
@@ -73,6 +86,9 @@ data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
   deriving stock (Enum, Eq, Generic, Show)
 
 instance Hashable Rarity
+
+instance ToJSON Rarity where
+  toJSON = genericToJSON defaultOptions { constructorTagModifier = toLowerCase }
 
 instance FromJSON Rarity where
   parseJSON =
@@ -88,7 +104,7 @@ data UriObj = UriObj
   , png :: String
   }
   deriving stock (Eq, Generic, Show)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance Hashable UriObj
 
@@ -126,6 +142,13 @@ data FrameEffect
 
 instance Hashable FrameEffect
 
+instance ToJSON FrameEffect where
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { constructorTagModifier = toLowerCase
+        }
+
 instance FromJSON FrameEffect where
   parseJSON =
     genericParseJSON
@@ -139,6 +162,9 @@ data CardFace = CardFace
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable)
+
+instance ToJSON CardFace where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = snakeCase }
 
 instance FromJSON CardFace where
   parseJSON = withObject "CardFace" $ \v ->
@@ -172,6 +198,11 @@ instance Eq CardObj where
   cardObjA == cardObjB =
     cardObjA.name == cardObjB.name
 
+instance ToJSON CardObj where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = snakeCase
+    }
+
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
     CardObj
@@ -204,12 +235,17 @@ data BorderColor
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable)
 
+instance ToJSON BorderColor where
+  toJSON =
+    genericToJSON
+      defaultOptions
+      { constructorTagModifier = toLowerCase . drop 5 }
+
 instance FromJSON BorderColor where
   parseJSON =
     genericParseJSON
       defaultOptions
-        { constructorTagModifier = toLowerCase . drop 5
-        }
+        { constructorTagModifier = toLowerCase . drop 5 }
 
 data BulkDataObj = BulkDataObj
   { id :: String
@@ -226,6 +262,43 @@ instance FromJSON BulkDataObj where
       <*> v .: "type"
       <*> v .: "name"
       <*> v .: "download_uri"
+
+data SetInfo = SetInfo
+  { id :: String,
+    code :: String,
+    searchUri :: String,
+    releasedAt :: String,
+    setType :: String,
+    cardCount:: Int
+  }
+  deriving stock (Generic, Show)
+
+instance FromJSON SetInfo  where
+  parseJSON = withObject "SetInfo" $ \v ->
+     SetInfo
+      <$> v .: "id"
+      <*> v .: "code"
+      <*> v .: "search_uri"
+      <*> v .: "released_at"
+      <*> v .: "set_type"
+      <*> v .: "card_count"
+
+data SetDataObj = SetDataObj
+  { object :: String
+  , totalCards :: Int
+  , hasMore :: Bool
+  , cardData :: [CardObj]
+  }
+  deriving stock (Generic, Show)
+
+instance FromJSON SetDataObj where
+  parseJSON = withObject "SetDataObj" $ \v ->
+    SetDataObj
+      <$> v .: "object"
+      <*> v .: "total_cards"
+      <*> v .: "has_more"
+      <*> v .: "data"
+
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty

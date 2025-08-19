@@ -53,10 +53,11 @@
             ghc
             ghc-prof-flamegraph
             ghcid
-            pkgs.haskell-language-server
-            pkgs.nixd
             profiteur
-          ];
+          ] ++ (with pkgs; [
+            haskell-language-server
+            nixd
+          ]);
           libraries = [
             pkgs.zlib
           ];

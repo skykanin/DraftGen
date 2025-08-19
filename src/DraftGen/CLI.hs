@@ -45,7 +45,6 @@ data Args w = Args
   , mythicChance :: w ::: Ratio <!> "1/8" <?> "Chance of rare being mythic, value given as ratio"
   , foilChance :: w ::: Ratio <!> "1/45" <?> "Chance of one common being a foil of any rarity, value given as ratio (where 1/45 means 1 in 45)"
   , downloadCards :: w ::: Bool <!> "False" <?> "Update card cache when generating packs"
-  , getCard :: w ::: Maybe String <?> "Ignores all other arguments and generates a pack containing the one specific card"
   }
   deriving stock (Generic)
 

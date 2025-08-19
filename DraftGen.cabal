@@ -65,6 +65,7 @@ library
 
   build-depends:
     , aeson
+    , async
     , base                  ^>=4.19.2.0
     , bytestring
     , containers
@@ -79,6 +80,9 @@ library
     , random
     , transformers
     , unordered-containers
+
+  other-modules:
+    Paths_DraftGen
 
   hs-source-dirs:  src/DraftGen
 
