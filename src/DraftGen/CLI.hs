@@ -44,7 +44,6 @@ data Args w = Args
   , rares :: w ::: Int <!> "1" <?> "Amount of rares in pack"
   , mythicChance :: w ::: Ratio <!> "1/8" <?> "Chance of rare being mythic, value given as ratio"
   , foilChance :: w ::: Ratio <!> "1/45" <?> "Chance of one common being a foil of any rarity, value given as ratio (where 1/45 means 1 in 45)"
-  , downloadCards :: w ::: Bool <!> "False" <?> "Update card cache when generating packs"
   }
   deriving stock (Generic)
 
