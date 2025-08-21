@@ -53,10 +53,10 @@
               fourmolu
               ghc
               ghc-prof-flamegraph
-              ghcid
               profiteur
             ]
             ++ (with pkgs; [
+              ghciwatch
               haskell-language-server
               nixd
             ]);

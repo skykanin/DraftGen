@@ -11,6 +11,7 @@ module Main where
 
 import Control.Monad.Catch
 import Control.Monad.IO.Class
+import Data.Aeson qualified as Json
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HS
 import Generate (filterDesired, readCards)
@@ -50,9 +51,24 @@ testFilters expectedLength eitherCards =
       cardObj.variation `shouldBe` False
       cardObj.borderColor `shouldNotBe` ColorBorderless
 
+encodeDecodeIsInverse :: (MonadIO m, MonadThrow m, Json.FromJSON a, Json.ToJSON a, Eq a, Show a) => a -> m ()
+encodeDecodeIsInverse v = Json.decode (Json.encode v) `shouldBe` Just v
+
+testCardFaceInverse :: (MonadIO m, MonadThrow m) => m ()
+testCardFaceInverse = encodeDecodeIsInverse CardFace {name = "Back", imageUris = Nothing}
+
+testFrameEffectInverse :: (MonadIO m, MonadThrow m) => m ()
+testFrameEffectInverse = encodeDecodeIsInverse CompassLandDfc
+
+testBorderColorInverse :: (MonadIO m, MonadThrow m) => m ()
+testBorderColorInverse = encodeDecodeIsInverse ColorBlack
+
 basic :: TopSpec
 basic = describe "Unit tests" $ do
   it "filterDesired filters out undesired card types" testFilterDesired
+  it "cardFace encode/decode are inverses" testCardFaceInverse
+  it "frameEffect encode/decode are inverses" testFrameEffectInverse
+  it "borderColor encode/decode are inverses" testBorderColorInverse
 
 main :: IO ()
 main = runSandwichWithCommandLineArgs defaultOptions basic

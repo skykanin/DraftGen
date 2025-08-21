@@ -12,29 +12,22 @@ module Util
   , cardCacheName
   , landName
   , packName
-  , snakeCase
   , tokenName
+  , splitOn
   )
 where
 
-import Data.Char
-
-snakeCase :: String -> String
-snakeCase = symbCase '_'
-
--- | Generic casing for symbol separated names
-symbCase :: Char -> (String -> String)
-symbCase sym = u . applyFirst toLower
+-- | Split a list on a delimiter element. The delimiter is removed.
+--   Example: splitOn ',' "a,b,,c" == ["a","b","","c"]
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn delim = go
  where
-  u [] = []
-  u (x : xs)
-    | isUpper x = sym : toLower x : u xs
-    | otherwise = x : u xs
-
-applyFirst :: (Char -> Char) -> String -> String
-applyFirst _ [] = []
-applyFirst f [x] = [f x]
-applyFirst f (x : xs) = f x : xs
+  go [] = [[]]
+  go (x : xs)
+    | x == delim = [] : go xs
+    | otherwise = case go xs of
+        [] -> [[x]]
+        (y : ys) -> (x : y) : ys
 
 appName :: FilePath
 appName = "DraftGen"

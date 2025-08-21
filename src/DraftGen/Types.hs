@@ -1,11 +1,16 @@
-{- |
-   Module      : Types
-   License     : GNU GPL, version 3 or above
-   Maintainer  : skykanin <3789764+skykanin@users.noreply.github.com>
-   Stability   : alpha
-   Portability : portable
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeData #-}
+{-# LANGUAGE UndecidableInstances #-}
 
- Module defining the data types representing cards
+{- |
+Module      : Types
+License     : GNU GPL, version 3 or above
+Maintainer  : skykanin <3789764+skykanin@users.noreply.github.com>
+Stability   : alpha
+Portability : portable
+
+Module defining the data types representing cards
 -}
 module Types
   ( PackConfig (..)
@@ -14,7 +19,6 @@ module Types
   , FrameEffect (..)
   , CardFace (..)
   , CardObj (..)
-  , BulkDataObj (..)
   , SetInfo (..)
   , SetDataObj (..)
   , CardImgObj (..)
@@ -32,11 +36,13 @@ where
 import CLI (Args (..), Ratio, Unwrapped)
 import Data.Aeson
   ( FromJSON (parseJSON)
+  , GToJSON
   , KeyValue ((.=))
   , Object
   , Options (constructorTagModifier, fieldLabelModifier)
   , ToJSON (toJSON)
-  , Value (Object, String)
+  , Value (Object)
+  , camelTo2
   , defaultOptions
   , genericParseJSON
   , genericToJSON
@@ -48,13 +54,58 @@ import Data.Aeson
   )
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as M
+import Data.Aeson.Types (GFromJSON, Zero)
 import Data.Char (toLower)
 import Data.Hashable (Hashable)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
-import GHC.Generics (Generic)
+import GHC.Generics (Generic (..))
 import Text.Printf (printf)
-import Util (packName, snakeCase)
+import Util (packName, splitOn)
+
+newtype ConfigJSON (opts :: JsonOption) a = ConfigJSON a
+
+type data JsonOption = SnakeCase | LowerCase | StripPrefix
+
+class HasJsonOptions tag where
+  jsonOptions :: Options
+
+instance HasJsonOptions SnakeCase where
+  jsonOptions =
+    defaultOptions
+      { fieldLabelModifier = camelTo2 '_'
+      , constructorTagModifier = toLowerCase
+      }
+
+instance HasJsonOptions LowerCase where
+  jsonOptions =
+    defaultOptions
+      { constructorTagModifier = toLowerCase
+      , fieldLabelModifier = toLowerCase
+      }
+
+-- | Strips a camelcased prefix of constructor tag and lowercases it
+--
+-- >>> constructorTagModifier "ColorRed"
+-- "red"
+instance HasJsonOptions StripPrefix where
+  jsonOptions =
+    defaultOptions
+      { constructorTagModifier =
+          toLowerCase . (!! 1) . splitOn '_' . camelTo2 '_'
+      }
+
+instance
+  (Generic a, GToJSON Zero (Rep a), HasJsonOptions tag)
+  => ToJSON (ConfigJSON tag a)
+  where
+  toJSON = genericToJSON (jsonOptions @tag) . (\(ConfigJSON x) -> x)
+
+instance
+  (Generic a, GFromJSON Zero (Rep a), HasJsonOptions tag)
+  => FromJSON (ConfigJSON tag a)
+  where
+  parseJSON = fmap ConfigJSON . genericParseJSON (jsonOptions @tag)
 
 data PackConfig = PackConfig
   { amount :: Int
@@ -82,18 +133,8 @@ toLowerCase = map toLower
 
 data Rarity = Common | Uncommon | Rare | Mythic | Special | Bonus
   deriving stock (Enum, Eq, Generic, Show)
-
-instance Hashable Rarity
-
-instance ToJSON Rarity where
-  toJSON = genericToJSON defaultOptions {constructorTagModifier = toLowerCase}
-
-instance FromJSON Rarity where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { constructorTagModifier = toLowerCase
-        }
+  deriving anyclass (Hashable)
+  deriving (FromJSON, ToJSON) via (ConfigJSON LowerCase Rarity)
 
 data UriObj = UriObj
   { small :: String
@@ -102,9 +143,8 @@ data UriObj = UriObj
   , png :: String
   }
   deriving stock (Eq, Generic, Show)
+  deriving anyclass (Hashable)
   deriving anyclass (FromJSON, ToJSON)
-
-instance Hashable UriObj
 
 data FrameEffect
   = Legendary
@@ -137,22 +177,8 @@ data FrameEffect
   | Fullart
   | Vehicle
   deriving stock (Eq, Generic, Show)
-
-instance Hashable FrameEffect
-
-instance ToJSON FrameEffect where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { constructorTagModifier = toLowerCase
-        }
-
-instance FromJSON FrameEffect where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { constructorTagModifier = toLowerCase
-        }
+  deriving anyclass (Hashable)
+  deriving (FromJSON, ToJSON) via (ConfigJSON LowerCase FrameEffect)
 
 data CardFace = CardFace
   { name :: String
@@ -160,13 +186,7 @@ data CardFace = CardFace
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable)
-
-instance ToJSON CardFace where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = snakeCase}
-
-instance FromJSON CardFace where
-  parseJSON = withObject "CardFace" $ \v ->
-    CardFace <$> v .: "name" <*> v .:? "image_uris"
+  deriving (FromJSON, ToJSON) via (ConfigJSON SnakeCase CardFace)
 
 data CardObj = CardObj
   { id :: String
@@ -190,18 +210,12 @@ data CardObj = CardObj
   }
   deriving stock (Generic, Show)
   deriving anyclass (Hashable)
+  deriving (ToJSON) via (ConfigJSON SnakeCase CardObj)
 
 -- | Check card equality only by name
 instance Eq CardObj where
   cardObjA == cardObjB =
     cardObjA.name == cardObjB.name
-
-instance ToJSON CardObj where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = snakeCase
-        }
 
 instance FromJSON CardObj where
   parseJSON = withObject "CardObj" $ \v ->
@@ -234,36 +248,7 @@ data BorderColor
   | ColorYellow
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable)
-
-instance ToJSON BorderColor where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { constructorTagModifier = toLowerCase . drop 5
-        }
-
-instance FromJSON BorderColor where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { constructorTagModifier = toLowerCase . drop 5
-        }
-
-data BulkDataObj = BulkDataObj
-  { id :: String
-  , bulkType :: String
-  , name :: String
-  , downloadUri :: String
-  }
-  deriving stock (Generic, Show)
-
-instance FromJSON BulkDataObj where
-  parseJSON = withObject "BulkDataObj" $ \v ->
-    BulkDataObj
-      <$> v .: "id"
-      <*> v .: "type"
-      <*> v .: "name"
-      <*> v .: "download_uri"
+  deriving (FromJSON, ToJSON) via (ConfigJSON StripPrefix BorderColor)
 
 data SetInfo = SetInfo
   { id :: String
@@ -274,16 +259,7 @@ data SetInfo = SetInfo
   , cardCount :: Int
   }
   deriving stock (Generic, Show)
-
-instance FromJSON SetInfo where
-  parseJSON = withObject "SetInfo" $ \v ->
-    SetInfo
-      <$> v .: "id"
-      <*> v .: "code"
-      <*> v .: "search_uri"
-      <*> v .: "released_at"
-      <*> v .: "set_type"
-      <*> v .: "card_count"
+  deriving (FromJSON) via (ConfigJSON SnakeCase SetInfo)
 
 data SetDataObj = SetDataObj
   { object :: String
@@ -292,14 +268,7 @@ data SetDataObj = SetDataObj
   , cardData :: [CardObj]
   }
   deriving stock (Generic, Show)
-
-instance FromJSON SetDataObj where
-  parseJSON = withObject "SetDataObj" $ \v ->
-    SetDataObj
-      <$> v .: "object"
-      <*> v .: "total_cards"
-      <*> v .: "has_more"
-      <*> v .: "data"
+  deriving (FromJSON) via (ConfigJSON SnakeCase SetDataObj)
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
@@ -317,14 +286,11 @@ data CardImgObj = CardImgObj
   , faceURL :: String
   }
   deriving stock (Generic, Show)
-
-instance ToJSON CardImgObj
+  deriving anyclass (ToJSON)
 
 data ObjType = Card
   deriving stock (Generic, Show)
-
-instance ToJSON ObjType where
-  toJSON Card = String "Card"
+  deriving anyclass (ToJSON)
 
 data TransformObj = TransformObj
   { scaleZ :: Int
@@ -347,14 +313,7 @@ data TTSCardObj = TTSCardObj
   , cardID :: Int
   }
   deriving stock (Generic, Show)
-
-instance ToJSON TTSCardObj where
-  toJSON =
-    genericToJSON $
-      defaultOptions {fieldLabelModifier = lower}
-   where
-    lower [] = []
-    lower (x : xs) = toLower x : xs
+  deriving (ToJSON) via (ConfigJSON LowerCase TTSCardObj)
 
 data GameObj = GameObj
   { transform :: TransformObj
