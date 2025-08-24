@@ -21,17 +21,25 @@
       perSystem = {
         lib,
         pkgs,
+        pkgsStatic,
+        ghcVersion,
+        hpkgs,
+        hlib,
         system,
         self',
         ...
       }: {
-        _module.args.pkgs = let
-          overlays = {
-            alejandra = import ./nix/overlays/alejandra/default.nix;
-          };
-        in
-          builtins.foldl' (acc: overlay: acc.extend overlay)
-          inputs.nixpkgs.legacyPackages.${system} (builtins.attrValues overlays);
+        _module.args = {
+          ghcVersion = "ghc98";
+          hpkgs = pkgs.haskell.packages."${ghcVersion}";
+          hlib = pkgs.haskell.lib;
+          pkgsStatic = pkgs.pkgsStatic;
+          pkgs = let
+            overlays.alejandra = import ./nix/overlays/alejandra/default.nix;
+          in
+            builtins.foldl' (acc: overlay: acc.extend overlay)
+            inputs.nixpkgs.legacyPackages.${system} (builtins.attrValues overlays);
+        };
 
         formatter = pkgs.alejandra;
 
@@ -45,7 +53,6 @@
           in "${script}/bin/${name}";
         };
         devShells.default = let
-          hpkgs = pkgs.haskell.packages.ghc98;
           tools = with hpkgs;
             [
               cabal-fmt
@@ -66,15 +73,30 @@
           libraryPath = "${lib.makeLibraryPath libraries}";
         in
           hpkgs.shellFor {
-            name = "dev-shell";
+            name = "draftgen-dev-shell";
 
-            packages = p: [];
+            packages = p: [self'.packages.draftgen];
             withHoogle = true;
             buildInputs = tools ++ libraries;
 
             LD_LIBRARY_PATH = libraryPath;
             LIBRARY_PATH = libraryPath;
           };
+
+        packages.dg-prelude = pkgsStatic.haskell.packages."${ghcVersion}".callCabal2nix "dg-prelude" ./prelude {};
+        packages.draftgen = pkgsStatic.haskell.packages."${ghcVersion}".callCabal2nix "DraftGen" ./. {
+          inherit (self'.packages) dg-prelude;
+        };
+        packages.draftgen-static = hlib.overrideCabal (self'.packages.draftgen) (old: {
+          configureFlags =
+            (old.configureFlags or [])
+            ++ [
+              "--ghc-option=-optl=-static"
+              "--extra-lib-dirs=${pkgsStatic.zlib}/lib"
+              "--extra-lib-dirs=${pkgsStatic.gmp6}/lib"
+              "--extra-lib-dirs=${pkgsStatic.libffi}/lib"
+            ];
+        });
       };
     };
 }
