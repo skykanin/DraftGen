@@ -91,7 +91,8 @@
           configureFlags =
             (old.configureFlags or [])
             ++ [
-              "--ghc-option=-optl=-static"
+              "--ghc-option=-optl-static"
+              "--ghc-option=-split-sections"
               "--extra-lib-dirs=${pkgsStatic.zlib}/lib"
               "--extra-lib-dirs=${pkgsStatic.gmp6}/lib"
               "--extra-lib-dirs=${pkgsStatic.libffi}/lib"
