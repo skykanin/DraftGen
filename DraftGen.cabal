@@ -14,7 +14,7 @@ author:             skykanin
 maintainer:         3789764+skykanin@users.noreply.github.com
 copyright:          skykanin
 build-type:         Simple
-tested-with:        GHC ==9.4.6
+tested-with:        GHC ==9.8.4
 extra-source-files: README.md
 
 common common-language

@@ -11,7 +11,7 @@ DraftGen lets you generate booster packs for MTG. The default options are set to
 Lastly copy the json files to your `Saved Objects` folder for Tabletop Simulator and you can access them in the game.
 
 There is also an argument `get-card` which lets you search for a single card. This
-can be used to retrieve helper cards such as a double-faced substitute card. 
+can be used to retrieve helper cards such as a double-faced substitute card.
 
 # Develop
 ## Prerequisites
@@ -32,8 +32,20 @@ On the first run you will be prompted to run `cabal update`.
 After that you can run the project with `cabal run`. To pass command line arguments to cabal you run `cabal run <artifact> -- <args go here>`.
 
 ## Build
+
+### With Cabal
 To build the project using cabal you can run
 `cabal build [...opts]`
+
+### With Nix
+To build the project through nix you can run
+```sh
+nix build .#draftgen
+```
+If you want a static binary instead you can get that with
+```sh
+nix build .#draftgen-static
+```
 
 ## Retrieve changelog
 To get the changelog between the latest tagged commit and the previous tagged commit one can run `cabal run -z GenChangelog.hs` to print out the list.
