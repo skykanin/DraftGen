@@ -9,7 +9,7 @@
 -}
 module File (execute) where
 
-import CLI
+import CLI qualified
 import Control.Concurrent.Async qualified as Async
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT)
@@ -21,10 +21,10 @@ import Data.HashSet qualified as HS
 import Data.Version (showVersion)
 import Encode (encodePacks)
 import Generate (genLands, genPacks, genTokens)
-import Network.HTTP.Client
-import Network.HTTP.Client.TLS
+import Network.HTTP.Client qualified as Http
+import Network.HTTP.Client.TLS qualified as Http
 import Paths_DraftGen qualified as Paths
-import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
+import System.Directory qualified as Filesystem
 import System.FilePath ((<.>), (</>))
 import Text.Printf (printf)
 import Types (CardObj, PackConfig (..), SetDataObj (..), SetInfo (..), fileName, fromArgs)
@@ -32,15 +32,15 @@ import Util (appName, landName, packName, tokenName)
 
 execute :: IO ()
 execute = (either putStrLn pure <=< runExceptT) $ do
-  rawArgs <- liftIO $ unwrapRecord ""
+  rawArgs <- liftIO $ CLI.unwrapRecord ""
   args <- ExceptT . pure $ validateArgs rawArgs
   let config = fromArgs args
       ln = fileName config landName
       pn = fileName config packName
       tn = fileName config tokenName
   cards <- getFromCache config.set
-  dataPath <- liftIO $ getXdgDirectory XdgData appName
-  liftIO $ createDirectoryIfMissing True dataPath
+  dataPath <- liftIO $ Filesystem.getXdgDirectory Filesystem.XdgData appName
+  liftIO $ Filesystem.createDirectoryIfMissing True dataPath
   selectedCards <- liftIO $ genPacks config cards
   liftIO $ Json.encodeFile (dataPath </> tn) $ encodePacks $ genTokens config cards
   liftIO $ Json.encodeFile (dataPath </> ln) $ encodePacks $ genLands config cards
@@ -48,7 +48,7 @@ execute = (either putStrLn pure <=< runExceptT) $ do
   liftIO $ printf "Packs generated at: %s\nLands at: %s\nTokens at: %s" (dataPath </> pn) (dataPath </> ln) (dataPath </> tn)
 
 -- | Check that integer arguments aren't negative
-validateArgs :: Args Unwrapped -> Either String (Args Unwrapped)
+validateArgs :: CLI.Args CLI.Unwrapped -> Either String (CLI.Args CLI.Unwrapped)
 validateArgs as
   | as.amount < 1 = Left "Error: amount is less than one"
   | as.commons < 0 = Left "Error: commons is negative"
@@ -58,9 +58,9 @@ validateArgs as
 
 getFromCache :: MonadIO m => String -> ExceptT String m (HashSet CardObj)
 getFromCache set = do
-  cachePrefixPath <- liftIO $ getXdgDirectory XdgCache appName
+  cachePrefixPath <- liftIO $ Filesystem.getXdgDirectory Filesystem.XdgCache appName
   let filepath = cachePrefixPath </> set <.> "json"
-  setFileExists <- liftIO $ doesFileExist filepath
+  setFileExists <- liftIO $ Filesystem.doesFileExist filepath
   if setFileExists
     then ExceptT $ readCards filepath
     else do
@@ -72,28 +72,30 @@ getFromCache set = do
 
 writeSet :: String -> HashSet CardObj -> IO ()
 writeSet set cards = do
-  cachePathPrefix <- liftIO $ getXdgDirectory XdgCache appName
+  cachePathPrefix <- liftIO $ Filesystem.getXdgDirectory Filesystem.XdgCache appName
+  cacheDirectoryExists <- Filesystem.doesDirectoryExist cachePathPrefix
+  unless cacheDirectoryExists $ Filesystem.createDirectory cachePathPrefix
   Json.encodeFile (cachePathPrefix </> set <> ".json") cards
 
 -- Make a GET request to the scryfall API
-getScryfall :: Manager -> String -> [(BS.ByteString, Maybe BS.ByteString)] -> IO (Response BSL.ByteString)
+getScryfall :: Http.Manager -> String -> [(BS.ByteString, Maybe BS.ByteString)] -> IO (Http.Response BSL.ByteString)
 getScryfall manager url queryParams = do
-  req <- parseRequest url
+  req <- Http.parseRequest url
   let version = BS.pack $ showVersion Paths.version
       req' =
         req
-          { requestHeaders =
+          { Http.requestHeaders =
               [ ("Accept", "application/json")
               , ("User-Agent", "draftgen/" `BS.append` version)
               ]
           }
-          & setQueryString queryParams
-  httpLbs req' manager
+          & Http.setQueryString queryParams
+  Http.httpLbs req' manager
 
 -- Fetch all cards from a given set through scryfall
 fetchSet :: MonadIO m => String -> ExceptT String m (HashSet CardObj)
 fetchSet set = do
-  manager <- liftIO $ newManager tlsManagerSettings
+  manager <- liftIO $ Http.newManager Http.tlsManagerSettings
   setInfoRes <- liftIO $ getScryfall manager ("https://api.scryfall.com/sets" </> set) []
   setInfo <- ExceptT . pure $ Json.eitherDecode @SetInfo setInfoRes.responseBody
   let pages :: [Int] =

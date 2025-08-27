@@ -268,7 +268,14 @@ data SetDataObj = SetDataObj
   , cardData :: [CardObj]
   }
   deriving stock (Generic, Show)
-  deriving (FromJSON) via (ConfigJSON SnakeCase SetDataObj)
+
+instance FromJSON SetDataObj where
+  parseJSON = withObject "SetDataObj" $ \v ->
+    SetDataObj
+      <$> v .: "object"
+      <*> v .: "total_cards"
+      <*> v .: "has_more"
+      <*> v .: "data"
 
 toObject :: Seq CardImgObj -> Value
 toObject = Object . go 1 M.empty
