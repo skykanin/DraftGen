@@ -7,7 +7,7 @@
 
  Module for handling reading from and writing to files
 -}
-module File (execute) where
+module File (execute, run) where
 
 import CLI qualified
 import Control.Concurrent.Async qualified as Async
@@ -34,8 +34,11 @@ execute :: IO ()
 execute = (either putStrLn pure <=< runExceptT) $ do
   rawArgs <- liftIO $ CLI.unwrapRecord ""
   args <- ExceptT . pure $ validateArgs rawArgs
-  let config = fromArgs args
-      ln = fileName config landName
+  run $ fromArgs args
+
+run :: MonadIO m => PackConfig -> ExceptT String m ()
+run config = do
+  let ln = fileName config landName
       pn = fileName config packName
       tn = fileName config tokenName
   cards <- getFromCache config.set
