@@ -9,11 +9,14 @@
 -}
 module Main where
 
+import CLI
 import Control.Monad.Catch
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson qualified as Json
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HS
+import File (run)
 import Generate (filterDesired, readCards)
 import System.FilePath
 import Test.Sandwich
@@ -63,12 +66,27 @@ testFrameEffectInverse = encodeDecodeIsInverse CompassLandDfc
 testBorderColorInverse :: (MonadIO m, MonadThrow m) => m ()
 testBorderColorInverse = encodeDecodeIsInverse ColorBlack
 
+genPacks :: (MonadIO m, MonadThrow m) => m ()
+genPacks = runExceptT (run config) *> shouldBe True True
+ where
+  config =
+    PackConfig
+      { amount = 6
+      , set = "fin"
+      , commons = 10
+      , uncommons = 3
+      , rareOrMythics = 1
+      , mythicChance = Ratio 1 8
+      , foilChance = Ratio 1 45
+      }
+
 basic :: TopSpec
 basic = describe "Unit tests" $ do
   it "filterDesired filters out undesired card types" testFilterDesired
   it "cardFace encode/decode are inverses" testCardFaceInverse
   it "frameEffect encode/decode are inverses" testFrameEffectInverse
   it "borderColor encode/decode are inverses" testBorderColorInverse
+  it "generates packs without throwing exceptions" genPacks
 
 main :: IO ()
 main = runSandwichWithCommandLineArgs defaultOptions basic

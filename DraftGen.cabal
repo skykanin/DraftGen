@@ -101,6 +101,7 @@ test-suite unit-tests
     , filepath
     , pretty-simple
     , sandwich
+    , transformers
     , unordered-containers
 
   ghc-options:    -threaded

@@ -24,7 +24,6 @@
         pkgsStatic,
         ghcVersion,
         hpkgs,
-        hlib,
         system,
         self',
         ...
@@ -87,17 +86,6 @@
         packages.draftgen = pkgsStatic.haskell.packages."${ghcVersion}".callCabal2nix "DraftGen" ./. {
           inherit (self'.packages) dg-prelude;
         };
-        packages.draftgen-static = hlib.overrideCabal (self'.packages.draftgen) (old: {
-          configureFlags =
-            (old.configureFlags or [])
-            ++ [
-              "--ghc-option=-optl-static"
-              "--ghc-option=-split-sections"
-              "--extra-lib-dirs=${pkgsStatic.zlib}/lib"
-              "--extra-lib-dirs=${pkgsStatic.gmp6}/lib"
-              "--extra-lib-dirs=${pkgsStatic.libffi}/lib"
-            ];
-        });
       };
     };
 }
