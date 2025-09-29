@@ -52,7 +52,7 @@
           in "${script}/bin/${name}";
         };
         devShells.default = let
-          tools = with hpkgs;
+          tools = (with hpkgs;
             [
               cabal-fmt
               cabal-install
@@ -60,7 +60,7 @@
               ghc
               ghc-prof-flamegraph
               profiteur
-            ]
+            ])
             ++ (with pkgs; [
               ghciwatch
               haskell-language-server
@@ -74,7 +74,7 @@
           hpkgs.shellFor {
             name = "draftgen-dev-shell";
 
-            packages = p: [self'.packages.draftgen];
+            packages = p: [ self'.packages.draftgen ];
             withHoogle = true;
             buildInputs = tools ++ libraries;
 
