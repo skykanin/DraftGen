@@ -61,17 +61,20 @@ jobs:
           nix flake check
           nix run .#check-formatting
 
-      - name: Check Haskell formatting
-        uses: haskell-actions/run-fourmolu@v11
-        with:
-          version: "0.15.0.0"
-          pattern: |
-            src/**/*.hs
-            prelude/**/*.hs
-            test/**/*.hs
+      # Idk seems broken, and doesn't even print output from fourmolu
+      # if it the formatting check fails
+      #
+      # - name: Check Haskell formatting
+      #   uses: haskell-actions/run-fourmolu@v11
+      #   with:
+      #     version: "0.15.0.0"
+      #     pattern: |
+      #       src/**/*.hs
+      #       prelude/**/*.hs
+      #       test/**/*.hs
 
-          # Don't follow symbolic links to .hs files.
-          follow-symbolic-links: false
+      #     # Don't follow symbolic links to .hs files.
+      #     follow-symbolic-links: false
 
       - name: Update cabal packages
         run: nix develop -c cabal update
