@@ -7,7 +7,7 @@
 
  Module for handling reading from and writing to files
 -}
-module File (execute, run) where
+module File (execute, getFromCache, run) where
 
 import CLI qualified
 import Control.Concurrent.Async qualified as Async
@@ -102,7 +102,7 @@ fetchSet set = do
   setInfoRes <- liftIO $ getScryfall manager ("https://api.scryfall.com/sets" </> set) []
   setInfo <- ExceptT . pure $ Json.eitherDecode @SetInfo setInfoRes.responseBody
   let pages :: [Int] =
-        enumFromTo 1 $ ceiling $ fromIntegral @_ @Double setInfo.cardCount / 175
+        enumFromTo 1 . succ $ setInfo.cardCount `div` 175
       getSetData page =
         getScryfall
           manager

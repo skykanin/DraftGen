@@ -12,12 +12,15 @@ module Main where
 import CLI
 import Control.Monad.Catch
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Except (runExceptT)
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Data.Aeson qualified as Json
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HS
-import File (run)
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
+import File qualified
 import Generate (filterDesired, readCards)
+import Generate qualified
 import System.FilePath
 import Test.Sandwich
 import Types
@@ -66,13 +69,38 @@ testFrameEffectInverse = encodeDecodeIsInverse CompassLandDfc
 testBorderColorInverse :: (MonadIO m, MonadThrow m) => m ()
 testBorderColorInverse = encodeDecodeIsInverse ColorBlack
 
-genPacks :: (MonadIO m, MonadThrow m) => m ()
-genPacks = runExceptT (run config) *> shouldBe True True
+-- | Simulate running DraftGen from the command line
+-- This function generates packs, encodes and writes them to the file system.
+simulateMain :: (MonadIO m, MonadThrow m) => m ()
+simulateMain = runExceptT (File.run config) *> shouldBe True True
  where
   config =
     PackConfig
       { amount = 6
       , set = "fin"
+      , commons = 10
+      , uncommons = 3
+      , rareOrMythics = 1
+      , mythicChance = Ratio 1 8
+      , foilChance = Ratio 1 45
+      }
+
+generatePack :: MonadIO m => PackConfig -> ExceptT String m (Seq CardObj)
+generatePack config = do
+  cards <- File.getFromCache config.set
+  liftIO $ Generate.genPack config cards
+
+generatesValidPack :: (MonadIO m, MonadThrow m) => m ()
+generatesValidPack = do
+  packRes <- runExceptT $ generatePack config
+  case packRes of
+    Left err -> expectationFailure err
+    Right pack -> Seq.length pack `shouldBe` (config.commons + config.uncommons + config.rareOrMythics)
+ where
+  config =
+    PackConfig
+      { amount = 6
+      , set = "om1"
       , commons = 10
       , uncommons = 3
       , rareOrMythics = 1
@@ -86,7 +114,8 @@ basic = describe "Unit tests" $ do
   it "cardFace encode/decode are inverses" testCardFaceInverse
   it "frameEffect encode/decode are inverses" testFrameEffectInverse
   it "borderColor encode/decode are inverses" testBorderColorInverse
-  it "generates packs without throwing exceptions" genPacks
+  it "generates a valid pack with the expected contents" generatesValidPack
+  it "generates packs without throwing exceptions" simulateMain
 
 main :: IO ()
 main = runSandwichWithCommandLineArgs defaultOptions basic

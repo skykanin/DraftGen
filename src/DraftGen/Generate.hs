@@ -11,6 +11,7 @@ module Generate
   ( encodeFile
   , filterBySet
   , genLands
+  , genPack
   , genPacks
   , genTokens
   , readCards
@@ -73,7 +74,6 @@ filterDesired = S.filter $ \card ->
     [ \card -> card.layout `notElem` unwantedLayout
     , \card -> null $ card.frameEffects `intersect` unwantedFrameEffects
     , \card -> not card.variation
-    , \card -> not card.reprint
     , \card -> not card.fullArt
     , \card -> not card.promo
     , \card -> card.borderColor /= ColorBorderless
@@ -165,13 +165,13 @@ genTokens config = pure . filterBySet ('t' : config.set)
 
 -- | Generate a random pack based on the pack configuration
 genPack :: PackConfig -> HashSet CardObj -> IO (Seq CardObj)
-genPack config cards =
+genPack config setCards =
   if config.set == "stx"
-    then genStrixhavenPack config cards
+    then genStrixhavenPack config setCards
     else do
-      let setCards = english . filterBySet config.set . filterDesired $ cards
-          base = filterBasicLands Out setCards
-          english = S.filter (\c -> c.lang == "en")
+      let english = S.filter (\c -> c.lang == "en")
+          desiredCards = english . filterDesired $ setCards
+          base = filterBasicLands Out desiredCards
           fbr r = filterByRarity r base
           foils = S.filter (.foil) base
       commonWithMaybeFoilCards <-
@@ -187,10 +187,10 @@ fromSets = foldr ((Sq.><) . Sq.fromList . S.toList) Sq.empty
 -- | Generate a strixhaven pack (has special rules)
 genStrixhavenPack :: PackConfig -> HashSet CardObj -> IO (Seq CardObj)
 genStrixhavenPack config cards = do
-  let stxCards = english . filterBySet config.set . filterDesired $ cards
+  let stxCards = english . filterDesired $ cards
       baseNoLesson = filterLesson Out . filterBasicLands Out $ stxCards
       lessons = filterLesson In stxCards
-      staCards = english . filterBySet "sta" $ cards
+      staCards = english cards
       english = S.filter (\card -> card.lang == "en")
       fbr r = filterByRarity r baseNoLesson
       foils = S.filter (.foil) baseNoLesson

@@ -52,15 +52,15 @@
           in "${script}/bin/${name}";
         };
         devShells.default = let
-          tools = with hpkgs;
-            [
+          tools =
+            (with hpkgs; [
               cabal-fmt
               cabal-install
               fourmolu
               ghc
               ghc-prof-flamegraph
               profiteur
-            ]
+            ])
             ++ (with pkgs; [
               ghciwatch
               haskell-language-server
