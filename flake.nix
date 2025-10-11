@@ -52,8 +52,8 @@
           in "${script}/bin/${name}";
         };
         devShells.default = let
-          tools = (with hpkgs;
-            [
+          tools =
+            (with hpkgs; [
               cabal-fmt
               cabal-install
               fourmolu
@@ -74,7 +74,7 @@
           hpkgs.shellFor {
             name = "draftgen-dev-shell";
 
-            packages = p: [ self'.packages.draftgen ];
+            packages = p: [self'.packages.draftgen];
             withHoogle = true;
             buildInputs = tools ++ libraries;
 
